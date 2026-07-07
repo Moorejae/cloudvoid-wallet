@@ -1,0 +1,28 @@
+{
+  "trending": [
+    { "address": "0xmeme_doge_001", "symbol": "DOGE", "name": "Dogecoin", "price": 0.1542, "change24h": 5.23, "volume": 1842000000, "icon": "https://cryptologos.cc/logos/dogecoin-doge-logo.png", "marketCap": 22100000000 },
+    { "address": "0xmeme_pepe_002", "symbol": "PEPE", "name": "Pepe", "price": 0.00001285, "change24h": 12.87, "volume": 985000000, "icon": "https://cryptologos.cc/logos/pepe-pepe-logo.png", "marketCap": 5400000000 },
+    { "address": "0xmeme_shib_003", "symbol": "SHIB", "name": "Shiba Inu", "price": 0.00001785, "change24h": -2.14, "volume": 456000000, "icon": "https://cryptologos.cc/logos/shiba-inu-shib-logo.png", "marketCap": 10500000000 },
+    { "address": "0xmeme_wif_004", "symbol": "WIF", "name": "dogwifhat", "price": 2.54, "change24h": 18.92, "volume": 723000000, "icon": "https://cryptologos.cc/logos/solana-sol-logo.png", "marketCap": 2540000000 },
+    { "address": "0xmeme_bonk_005", "symbol": "BONK", "name": "Bonk", "price": 0.00002135, "change24h": -1.32, "volume": 198000000, "icon": "https://cryptologos.cc/logos/solana-sol-logo.png", "marketCap": 1480000000 },
+    { "address": "0xmeme_floki_006", "symbol": "FLOKI", "name": "Floki Inu", "price": 0.0001625, "change24h": 8.76, "volume": 312000000, "icon": "https://cryptologos.cc/logos/ethereum-eth-logo.png", "marketCap": 1560000000 },
+    { "address": "0xmeme_popcat_007", "symbol": "POPCAT", "name": "Popcat", "price": 0.8754, "change24h": 24.15, "volume": 145000000, "icon": "https://cryptologos.cc/logos/solana-sol-logo.png", "marketCap": 856000000 },
+    { "address": "0xmeme_mog_008", "symbol": "MOG", "name": "Mog Coin", "price": 0.000002145, "change24h": 32.41, "volume": 87000000, "icon": "https://cryptologos.cc/logos/ethereum-eth-logo.png", "marketCap": 780000000 },
+    { "address": "0xmeme_brett_009", "symbol": "BRETT", "name": "Brett", "price": 0.1432, "change24h": -5.67, "volume": 92000000, "icon": "https://cryptologos.cc/logos/base-logo.png", "marketCap": 1420000000 },
+    { "address": "0xmeme_turbo_010", "symbol": "TURBO", "name": "Turbo", "price": 0.00654, "change24h": 15.23, "volume": 67000000, "icon": "https://cryptologos.cc/logos/ethereum-eth-logo.png", "marketCap": 425000000 }
+  ],
+  "newListings": [
+    { "address": "0xnew_moodeng_001", "symbol": "MOODENG", "name": "Moo Deng", "price": 0.0342, "change24h": 145.67, "volume": 42000000, "icon": "https://cryptologos.cc/logos/solana-sol-logo.png", "marketCap": 34200000, "listedAt": "2026-07-05T10:00:00Z" },
+    { "address": "0xnew_neiro_002", "symbol": "NEIRO", "name": "Neiro", "price": 0.00185, "change24h": 87.32, "volume": 28000000, "icon": "https://cryptologos.cc/logos/ethereum-eth-logo.png", "marketCap": 18500000, "listedAt": "2026-07-04T18:00:00Z" },
+    { "address": "0xnew_goat_003", "symbol": "GOAT", "name": "Goatseus Maximus", "price": 0.452, "change24h": -12.45, "volume": 15000000, "icon": "https://cryptologos.cc/logos/solana-sol-logo.png", "marketCap": 45200000, "listedAt": "2026-07-04T06:00:00Z" },
+    { "address": "0xnew_pnut_004", "symbol": "PNUT", "name": "Peanut the Squirrel", "price": 0.785, "change24h": 62.18, "volume": 38000000, "icon": "https://cryptologos.cc/logos/solana-sol-logo.png", "marketCap": 78500000, "listedAt": "2026-07-03T14:00:00Z" },
+    { "address": "0xnew_trump_005", "symbol": "TRUMP", "name": "Official Trump", "price": 12.54, "change24h": -8.92, "volume": 125000000, "icon": "https://cryptologos.cc/logos/solana-sol-logo.png", "marketCap": 2510000000, "listedAt": "2026-07-02T22:00:00Z" }
+  ],
+  "tokenDetails": {
+    "0xmeme_doge_001": { "address": "0xmeme_doge_001", "symbol": "DOGE", "name": "Dogecoin", "price": 0.1542, "change24h": 5.23, "volume": 1842000000, "marketCap": 22100000000, "icon": "https://cryptologos.cc/logos/dogecoin-doge-logo.png", "chain": "Multi-chain", "description": "The original memecoin, powered by the Shiba Inu dog meme. Community-driven cryptocurrency with fast transaction times." },
+    "0xmeme_pepe_002": { "address": "0xmeme_pepe_002", "symbol": "PEPE", "name": "Pepe", "price": 0.00001285, "change24h": 12.87, "volume": 985000000, "marketCap": 5400000000, "icon": "https://cryptologos.cc/logos/pepe-pepe-logo.png", "chain": "Ethereum", "description": "Deflationary memecoin inspired by the Pepe the Frog internet meme. No tax, simply memes." },
+    "0xmeme_shib_003": { "address": "0xmeme_shib_003", "symbol": "SHIB", "name": "Shiba Inu", "price": 0.00001785, "change24h": -2.14, "volume": 456000000, "marketCap": 10500000000, "icon": "https://cryptologos.cc/logos/shiba-inu-shib-logo.png", "chain": "Ethereum", "description": "Self-described Dogecoin killer with its own DEX (ShibaSwap), NFTs, and Layer 2 solution." },
+    "0xmeme_wif_004": { "address": "0xmeme_wif_004", "symbol": "WIF", "name": "dogwifhat", "price": 2.54, "change24h": 18.92, "volume": 723000000, "marketCap": 2540000000, "icon": "https://cryptologos.cc/logos/solana-sol-logo.png", "chain": "Solana", "description": "Solana-native memecoin featuring a Shiba Inu wearing a knitted hat. Pure community vibes." },
+    "0xmeme_bonk_005": { "address": "0xmeme_bonk_005", "symbol": "BONK", "name": "Bonk", "price": 0.00002135, "change24h": -1.32, "volume": 198000000, "marketCap": 1480000000, "icon": "https://cryptologos.cc/logos/solana-sol-logo.png", "chain": "Solana", "description": "Solana's first dog-themed coin, airdropped to the community during the SOL ecosystem recovery." }
+  }
+}

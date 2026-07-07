@@ -1,20 +1,20 @@
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import AppNavigator from './src/navigation/AppNavigator';
+import { useWalletStore } from './src/stores/walletStore';
+import { applyTheme } from './src/theme/tokens';
 
 export default function App() {
+  const theme = useWalletStore((state: any) => state.theme) || 'dark';
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <>
+      <AppNavigator />
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
