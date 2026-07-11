@@ -23,7 +23,7 @@ export default function RegisterScreen({ navigation }: any) {
   const calculatePasswordStrength = (pass: string) => {
     if (!pass) return { score: 0, label: 'None', color: '#4b5563' };
     let score = 0;
-    if (pass.length >= 12) score += 1;
+    if (pass.length >= 8) score += 1;
     if (/[A-Z]/.test(pass)) score += 1;
     if (/[a-z]/.test(pass)) score += 1;
     if (/[0-9]/.test(pass)) score += 1;
@@ -39,9 +39,8 @@ export default function RegisterScreen({ navigation }: any) {
   const isStep1Valid = isEmailValid(email);
   const isStep2Valid = 
     username.length >= 3 && 
-    password.length >= 12 && 
-    password === confirmPassword && 
-    passStrength.label !== 'Weak';
+    password.length >= 8 && 
+    password === confirmPassword;
 
   const handleStep1Submit = () => {
     if (!isStep1Valid) return;
@@ -110,7 +109,7 @@ export default function RegisterScreen({ navigation }: any) {
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Min 12 characters"
+              placeholder="Min 8 characters"
               placeholderTextColor={CloudVoidTheme.colors.textDisabled}
               secureTextEntry
               autoCapitalize="none"
@@ -247,13 +246,11 @@ export default function RegisterScreen({ navigation }: any) {
 
       {/* Social Buttons */}
       <View style={styles.socialContainer}>
-        <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialAuth('Google')}>
-          <Text style={styles.socialBtnIcon}>🔍</Text>
+        <TouchableOpacity style={styles.socialBtn} onPress={() => {}}>
           <Text style={styles.socialBtnText}>Google</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialAuth('Telegram')}>
-          <Text style={styles.socialBtnIcon}>✈️</Text>
+        <TouchableOpacity style={styles.socialBtn} onPress={() => {}}>
           <Text style={styles.socialBtnText}>Telegram</Text>
         </TouchableOpacity>
       </View>
@@ -372,6 +369,7 @@ const styles = StyleSheet.create({
   socialBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: CloudVoidTheme.colors.surface,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',

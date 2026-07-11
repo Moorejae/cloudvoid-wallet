@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Image } from 'react-native';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import { TRANSLATIONS } from '../utils/translations';
@@ -70,11 +70,13 @@ export default function WelcomeScreen({ navigation }: any) {
       {/* Glowing Insignia */}
       <View style={styles.centerContainer}>
         <Animated.View style={[styles.insigniaOuter, { transform: [{ scale: pulseAnim }] }]}>
-          <View style={styles.insigniaInner}>
-            <Text style={styles.insigniaGlyph}>☁️</Text>
-            <Text style={styles.logoText}>VOID</Text>
-          </View>
+          <Image 
+            source={require('../../assets/cloudvoid_logo.jpg')} 
+            style={styles.logoImage} 
+            resizeMode="cover"
+          />
         </Animated.View>
+        <Text style={styles.logoTitle}>VOID</Text>
       </View>
 
       {/* Actions */}
@@ -139,19 +141,18 @@ const styles = StyleSheet.create({
     shadowRadius: 25,
     elevation: 15,
   },
-  insigniaInner: {
-    alignItems: 'center',
+  logoImage: {
+    width: 154,
+    height: 154,
+    borderRadius: 77,
   },
-  insigniaGlyph: {
-    fontSize: 50,
-  },
-  logoText: {
-    fontSize: 14,
+  logoTitle: {
+    fontSize: 24,
     fontWeight: '900',
     color: CloudVoidTheme.colors.textPrimary,
-    letterSpacing: 6,
-    marginTop: 4,
-    marginLeft: 6,
+    letterSpacing: 8,
+    marginTop: 20,
+    textAlign: 'center',
   },
   buttonRow: {
     flexDirection: 'row',

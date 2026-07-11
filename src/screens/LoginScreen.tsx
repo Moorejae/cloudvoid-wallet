@@ -143,13 +143,11 @@ export default function LoginScreen({ navigation }: any) {
           <Text style={styles.socialBtnText}>Passkey</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialAuth('Google')}>
-          <Text style={styles.socialBtnIcon}>🔍</Text>
+        <TouchableOpacity style={styles.socialBtn} onPress={() => {}}>
           <Text style={styles.socialBtnText}>Google</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialAuth('Telegram')}>
-          <Text style={styles.socialBtnIcon}>✈️</Text>
+        <TouchableOpacity style={styles.socialBtn} onPress={() => {}}>
           <Text style={styles.socialBtnText}>Telegram</Text>
         </TouchableOpacity>
       </View>
@@ -285,6 +283,7 @@ const styles = StyleSheet.create({
   socialBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: CloudVoidTheme.colors.surface,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',

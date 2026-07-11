@@ -343,7 +343,7 @@ export default function AppNavigator() {
     'P2PBroker', 'OrderActive', 'Dispute',
     'DApps', 'Crypto Trade', 'DAppDetail', 'SwapConfirmation', 'Web3Flow', 'WalletConnectScanner'
   ];
-  const showAI = !blockedRoutes.includes(currentRoute);
+  const showAI = userId && !blockedRoutes.includes(currentRoute);
 
   return (
     <NavigationContainer

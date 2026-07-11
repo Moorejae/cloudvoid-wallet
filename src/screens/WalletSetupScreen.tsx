@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { CloudVoidTheme } from '../theme/tokens';
 
 export default function WalletSetupScreen({ navigation }: any) {
@@ -8,7 +8,11 @@ export default function WalletSetupScreen({ navigation }: any) {
       {/* Insignia Banner */}
       <View style={styles.insigniaContainer}>
         <View style={styles.insigniaOuter}>
-          <Text style={styles.insigniaGlyph}>☁️</Text>
+          <Image 
+            source={require('../../assets/cloudvoid_logo.jpg')} 
+            style={styles.logoImage} 
+            resizeMode="cover"
+          />
         </View>
         <Text style={styles.appName}>CloudVoid</Text>
         <Text style={styles.subtitle}>Your Gateway to Web3</Text>
@@ -69,8 +73,10 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 10,
   },
-  insigniaGlyph: {
-    fontSize: 36,
+  logoImage: {
+    width: 94,
+    height: 94,
+    borderRadius: 47,
   },
   appName: {
     fontSize: 28,
