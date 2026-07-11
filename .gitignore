@@ -5,7 +5,7 @@ node_modules/
 
 # Expo
 .expo/
-dist/
+# dist/ - included for server deployment via git pull
 web-build/
 expo-env.d.ts
 
