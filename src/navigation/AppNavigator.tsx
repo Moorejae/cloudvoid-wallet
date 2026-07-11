@@ -360,8 +360,7 @@ export default function AppNavigator() {
         <ThemeManager />
         <LanguageManager />
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {/* TODO: restore auth check — temporarily bypassed for UI testing */}
-          {false && !userId ? (
+          {!userId ? (
             <Stack.Screen name="AuthFlow" component={AuthStack} />
           ) : (
             <Stack.Screen name="MainFlow" component={MainTabNavigator} />

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Animated, Alert } 
 import * as Haptics from 'expo-haptics';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
+import { API_BASE_URL } from '../services/web3Api';
 
 export default function EmailVerifyScreen({ route, navigation }: any) {
   const email = route.params?.email || 'user@email.com';
@@ -66,32 +67,57 @@ export default function EmailVerifyScreen({ route, navigation }: any) {
 
   const verifyCode = async (fullCode: string) => {
     setIsSubmitting(true);
-    // Simulate API call to backend /api/auth/verify-otp
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: fullCode })
+      });
+      const data = await response.json();
       setIsSubmitting(false);
-      // Let's accept any code starting with 1 or 7, or mock success
-      if (fullCode === '000000' || fullCode.startsWith('1') || fullCode.startsWith('5')) {
+
+      if (response.ok && data.success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        // Successful verification -> navigate to WalletSetupScreen
         navigation.navigate('WalletSetup');
       } else {
         triggerShake();
-        // Clear code inputs
         setCode(Array(6).fill(''));
         inputRefs.current[0]?.focus();
         setFocusedIdx(0);
-        Alert.alert('Verification Failed', 'Invalid code entered. Please try again or use code "111111".');
+        Alert.alert('Verification Failed', data.error || 'Invalid code entered. Please try again.');
       }
-    }, 1500);
+    } catch (error) {
+      setIsSubmitting(false);
+      triggerShake();
+      setCode(Array(6).fill(''));
+      inputRefs.current[0]?.focus();
+      setFocusedIdx(0);
+      Alert.alert('Network Error', 'Could not connect to verification server. Please try again.');
+    }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (timer > 0) return;
     setTimer(60);
     setCode(Array(6).fill(''));
     inputRefs.current[0]?.focus();
     setFocusedIdx(0);
-    Alert.alert('OTP Dispatched', 'A new 6-digit verification code has been sent.');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        Alert.alert('OTP Dispatched', 'A new 6-digit verification code has been sent.');
+      } else {
+        Alert.alert('Resend Failed', data.error || 'Could not send verification code.');
+      }
+    } catch (error) {
+      Alert.alert('Network Error', 'Could not connect to server to resend OTP.');
+    }
   };
 
   return (

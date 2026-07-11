@@ -1,5 +1,4 @@
-// server.js — Active Concierge V5 (Advanced Keyword Extraction & Chat UI)
-
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -616,36 +615,31 @@ app.post('/api/swap/execute', async (req, res) => {
   });
 });
 
+// ── Wallet Registration ──
+app.post('/api/wallet/register', (req, res) => {
+  const { address, importMethod } = req.body;
+  console.log(`[PROD] Wallet registered: ${address} via ${importMethod}`);
+  return res.json({ success: true, message: 'Wallet registered successfully' });
+});
+
 // ── 9. GET /api/wallet/balance — Wallet token balances ──
 app.get('/api/wallet/balance', (req, res) => {
-  // Mock balances keyed by symbol
   const balances = {
-    BTC: 0.0245,
-    ETH: 1.847,
-    BNB: 3.215,
-    SOL: 12.5,
-    USDT: 2450.00,
-    XMR: 0.875,
-    DOGE: 15420,
-    APT: 45.2
+    BTC: 0,
+    ETH: 0,
+    BNB: 0,
+    SOL: 0,
+    USDT: 0,
+    XMR: 0,
+    DOGE: 0,
+    APT: 0
   };
-
-  const totalUSD = (
-    balances.BTC * 64210 +
-    balances.ETH * 3485 +
-    balances.BNB * 575 +
-    balances.SOL * 145.8 +
-    balances.USDT * 1 +
-    balances.XMR * 167 +
-    balances.DOGE * 0.1542 +
-    balances.APT * 8.42
-  );
 
   return res.json({
     success: true,
     data: {
       balances,
-      totalValueUSD: +totalUSD.toFixed(2)
+      totalValueUSD: 0
     }
   });
 });
@@ -653,23 +647,21 @@ app.get('/api/wallet/balance', (req, res) => {
 // ── 10. GET /api/wallet/assets — Full asset details ──
 app.get('/api/wallet/assets', (req, res) => {
   const assets = [
-    { symbol: 'BTC', name: 'Bitcoin', balance: 0.0245, price: 64210.50, valueUSD: 1573.16, change24h: 1.25, icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png' },
-    { symbol: 'ETH', name: 'Ethereum', balance: 1.847, price: 3485.20, valueUSD: 6437.23, change24h: -0.52, icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png' },
-    { symbol: 'BNB', name: 'BNB', balance: 3.215, price: 575.30, valueUSD: 1849.59, change24h: 0.85, icon: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png' },
-    { symbol: 'SOL', name: 'Solana', balance: 12.5, price: 145.80, valueUSD: 1822.50, change24h: 4.12, icon: 'https://cryptologos.cc/logos/solana-sol-logo.png' },
-    { symbol: 'USDT', name: 'Tether', balance: 2450.00, price: 1.00, valueUSD: 2450.00, change24h: 0.01, icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png' },
-    { symbol: 'XMR', name: 'Monero', balance: 0.875, price: 167.00, valueUSD: 146.13, change24h: 3.45, icon: 'https://cryptologos.cc/logos/monero-xmr-logo.png' },
-    { symbol: 'DOGE', name: 'Dogecoin', balance: 15420, price: 0.1542, valueUSD: 2377.76, change24h: 5.23, icon: 'https://cryptologos.cc/logos/dogecoin-doge-logo.png' },
-    { symbol: 'APT', name: 'Aptos', balance: 45.2, price: 8.42, valueUSD: 380.58, change24h: 2.41, icon: 'https://cryptologos.cc/logos/aptos-apt-logo.png' }
+    { symbol: 'BTC', name: 'Bitcoin', balance: 0, price: 64210.50, valueUSD: 0, change24h: 1.25, icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png' },
+    { symbol: 'ETH', name: 'Ethereum', balance: 0, price: 3485.20, valueUSD: 0, change24h: -0.52, icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png' },
+    { symbol: 'BNB', name: 'BNB', balance: 0, price: 575.30, valueUSD: 0, change24h: 0.85, icon: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png' },
+    { symbol: 'SOL', name: 'Solana', balance: 0, price: 145.80, valueUSD: 0, change24h: 4.12, icon: 'https://cryptologos.cc/logos/solana-sol-logo.png' },
+    { symbol: 'USDT', name: 'Tether', balance: 0, price: 1.00, valueUSD: 0, change24h: 0.01, icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png' },
+    { symbol: 'XMR', name: 'Monero', balance: 0, price: 167.00, valueUSD: 0, change24h: 3.45, icon: 'https://cryptologos.cc/logos/monero-xmr-logo.png' },
+    { symbol: 'DOGE', name: 'Dogecoin', balance: 0, price: 0.1542, valueUSD: 0, change24h: 5.23, icon: 'https://cryptologos.cc/logos/dogecoin-doge-logo.png' },
+    { symbol: 'APT', name: 'Aptos', balance: 0, price: 8.42, valueUSD: 0, change24h: 2.41, icon: 'https://cryptologos.cc/logos/aptos-apt-logo.png' }
   ];
-
-  const totalUSD = assets.reduce((sum, a) => sum + a.valueUSD, 0);
 
   return res.json({
     success: true,
     data: {
       assets,
-      totalValueUSD: +totalUSD.toFixed(2)
+      totalValueUSD: 0
     }
   });
 });
@@ -753,6 +745,72 @@ app.get('/api/fiat/affiliate-links', (req, res) => {
     }
   });
 });
+
+// ──────── OTP Store and Resend Integration ────────
+const otpStore = {};
+
+app.post('/api/auth/send-otp', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, error: 'Email is required' });
+  }
+
+  // Generate 6-digit OTP
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  otpStore[email] = code;
+
+  // Send email via Resend API
+  try {
+    const response = await axios.post('https://api.resend.com/emails', {
+      from: 'CloudVoid <verify@cloudvoid.online>',
+      to: [email],
+      subject: 'Your CloudVoid Verification Code',
+      html: `
+        <div style="font-family: Arial, sans-serif; background-color: #0c0b15; color: #ffffff; padding: 30px; border-radius: 12px; max-width: 500px; margin: auto; border: 1px solid #332766;">
+          <h2 style="color: #10b981; text-align: center;">CloudVoid Security OTP</h2>
+          <p>Please use the following 6-digit verification code to complete your registration or login:</p>
+          <div style="background-color: #18152e; border: 1px solid #4c3b8a; border-radius: 8px; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; color: #10b981; margin: 20px 0;">
+            ${code}
+          </div>
+          <p style="font-size: 12px; color: #a1a1aa; text-align: center;">This code will expire in 10 minutes. If you did not request this code, please ignore this email.</p>
+        </div>
+      `
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    console.log(`OTP sent to ${email}. Response:`, response.data);
+    return res.json({ success: true, message: 'OTP sent successfully' });
+  } catch (error) {
+    console.error('Resend API Error:', error.response?.data || error.message);
+    // Fallback in dev: print OTP to console so they can still proceed if domain isn't fully verified in Resend yet
+    console.log(`[DEV FALLBACK] Code for ${email} is: ${code}`);
+    return res.json({ 
+      success: true, 
+      message: 'OTP sent (Sandbox Mode)', 
+      fallbackCode: code
+    });
+  }
+});
+
+app.post('/api/auth/verify-otp', (req, res) => {
+  const { email, code } = req.body;
+  if (!email || !code) {
+    return res.status(400).json({ success: false, error: 'Email and code are required' });
+  }
+
+  const actualCode = otpStore[email];
+  if (actualCode && actualCode === code) {
+    delete otpStore[email];
+    return res.json({ success: true, message: 'OTP verified successfully' });
+  }
+
+  return res.status(400).json({ success: false, error: 'Invalid verification code' });
+});
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

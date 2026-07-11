@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Activi
 import { Ionicons } from '@expo/vector-icons';
 import { CloudVoidTheme } from '../theme/tokens';
 import axios from 'axios';
+import { API_BASE_URL } from '../services/web3Api';
 import Svg, { Path, Rect, Line } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 
@@ -34,7 +35,7 @@ export default function UnifiedTradingScreen() {
   // Fetch prices from our backend
   const fetchPrices = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/prices');
+      const res = await axios.get(`${API_BASE_URL}/api/prices`);
       setPrices(res.data);
       setLoading(false);
     } catch (err) {

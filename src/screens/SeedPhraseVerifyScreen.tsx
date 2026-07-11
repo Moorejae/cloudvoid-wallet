@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, ScrollView }
 import * as Haptics from 'expo-haptics';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
+import { API_BASE_URL } from '../services/web3Api';
 
 export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
   // Retrieve the mnemonic or fallback to a default BIP-39 phrase for stubs
@@ -51,7 +52,7 @@ export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
         
-        const response = await fetch('http://localhost:3000/api/wallet/register', {
+        const response = await fetch(`${API_BASE_URL}/api/wallet/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ address, importMethod: 'create' }),

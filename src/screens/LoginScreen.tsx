@@ -2,27 +2,44 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
+import { API_BASE_URL } from '../services/web3Api';
 
 export default function LoginScreen({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<'phone' | 'email'>('phone');
   const [phone, setPhone] = useState('');
   const [countryCode, setCountryCode] = useState('+234');
   const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const setUserId = useWalletStore((state) => state.setUserId);
   const setEmailStore = useWalletStore((state) => state.setEmail);
 
   const isEmailValid = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
   const isInputValid = activeTab === 'phone' ? phone.length >= 8 : isEmailValid(email);
 
-  const handleNext = () => {
-    if (!isInputValid) return;
+  const handleNext = async () => {
+    if (!isInputValid || isSubmitting) return;
+    setIsSubmitting(true);
+    const targetEmail = activeTab === 'email' ? email : `${phone}@cloudvoid.local`;
     
-    // Set mock user email/address and route to verification
-    const dummyAddress = activeTab === 'email' ? email : `${countryCode}${phone}`;
-    setEmailStore(activeTab === 'email' ? email : `${phone}@cloudvoid.local`);
-    
-    // Simulate user lookup; since it's a mockup, navigate to verification screen
-    navigation.navigate('EmailVerify', { email: activeTab === 'email' ? email : `${phone}@cloudvoid.local` });
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail })
+      });
+      const data = await response.json();
+      setIsSubmitting(false);
+
+      if (response.ok && data.success) {
+        setEmailStore(targetEmail);
+        navigation.navigate('EmailVerify', { email: targetEmail });
+      } else {
+        Alert.alert('Login Error', data.error || 'Failed to send verification code. Please try again.');
+      }
+    } catch (error) {
+      setIsSubmitting(false);
+      Alert.alert('Network Error', 'Could not connect to login server. Please try again.');
+    }
   };
 
   const handleSocialAuth = (provider: string) => {
@@ -102,13 +119,13 @@ export default function LoginScreen({ navigation }: any) {
       <TouchableOpacity
         style={[
           styles.nextBtn,
-          { backgroundColor: isInputValid ? CloudVoidTheme.colors.accent : '#2a2a2a' }
+          { backgroundColor: isInputValid && !isSubmitting ? CloudVoidTheme.colors.accent : '#2a2a2a' }
         ]}
         onPress={handleNext}
-        disabled={!isInputValid}
+        disabled={!isInputValid || isSubmitting}
       >
-        <Text style={[styles.nextBtnText, { color: isInputValid ? CloudVoidTheme.colors.btnText : CloudVoidTheme.colors.textSecondary }]}>
-          Next
+        <Text style={[styles.nextBtnText, { color: isInputValid && !isSubmitting ? CloudVoidTheme.colors.btnText : CloudVoidTheme.colors.textSecondary }]}>
+          {isSubmitting ? 'Sending OTP...' : 'Next'}
         </Text>
       </TouchableOpacity>
 

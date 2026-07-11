@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CloudVoidTheme, applyTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import axios from 'axios';
+import { API_BASE_URL } from '../services/web3Api';
 
 const GLOBAL_ACTIONS = [
   { label: 'Add Token', icon: 'add-circle-outline', command: 'add token' },
@@ -167,7 +168,7 @@ export default function AIBrain({ currentRouteName = 'Wallet' }: { currentRouteN
     setIsTyping(true);
 
     try {
-      const response = await axios.post('http://localhost:3000/api/concierge', { 
+      const response = await axios.post(`${API_BASE_URL}/api/concierge`, { 
         message: command, 
         currentScreen: 'Wallet', 
         sessionToken: 'local_session_001', 
@@ -192,7 +193,7 @@ export default function AIBrain({ currentRouteName = 'Wallet' }: { currentRouteN
     setIsTyping(true);
 
     try {
-      const response = await axios.post('http://localhost:3000/api/concierge', { 
+      const response = await axios.post(`${API_BASE_URL}/api/concierge`, { 
         message: userMsg, 
         currentScreen: 'Wallet', 
         sessionToken: 'local_session_001' 

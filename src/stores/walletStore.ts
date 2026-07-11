@@ -96,7 +96,7 @@ interface WalletState {
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
-  userId: 'test_user',
+  userId: null,
   email: null,
   trustPoints: 100,
   riskScore: 0,
@@ -105,7 +105,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   isBiometricEnabled: false,
   isScreenshotBlocked: false,
   isVerified: false,
-  activeWalletId: '1',
+  activeWalletId: '',
   notificationsEnabled: true,
   activeTxFilter: 'All',
   activeTxDateFilter: null,
@@ -114,22 +114,18 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   selectedLanguage: (typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem('cloudvoid_language')) || 'English',
   theme: (typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem('cloudvoid_theme') as 'dark' | 'light') || 'dark',
   balances: {
-    BTC: 0.452,
-    ETH: 2.15,
-    BNB: 4.8,
-    CELO: 150.0,
-    USDT: 500.0,
-    SOL: 12.5,
-    TRX: 850.0,
-    TON: 35.0,
-    XMR: 1.2,
-    MATIC: 450.0,
+    BTC: 0,
+    ETH: 0,
+    BNB: 0,
+    CELO: 0,
+    USDT: 0,
+    SOL: 0,
+    TRX: 0,
+    TON: 0,
+    XMR: 0,
+    MATIC: 0,
   },
-  wallets: [
-    { id: '1', name: 'Main Wallet', address: '0x1a2b...3c4d', status: 'Active' },
-    { id: '2', name: 'Wallet 1', address: '0x5e6f...7g8h', status: 'Active' },
-    { id: '3', name: 'Wallet 2', address: '0x9h0i...jklm', status: 'Active' },
-  ],
+  wallets: [],
   customRPCs: [],
   tokens: [
     { symbol: 'BTC', name: 'Bitcoin', price: 30121.75, change: 0.12, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', sparklineData: [40, 45, 42, 50, 48, 55, 60] },
@@ -138,52 +134,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     { symbol: 'XMR', name: 'Monero', price: 107.23, change: 3.45, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/monero/info/logo.png', sparklineData: [20, 25, 30, 40, 50, 55, 60] },
     { symbol: 'USDT', name: 'Tether', price: 100.00, change: -3.08, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [50, 52, 48, 49, 45, 42, 40] },
   ],
-  transactions: [
-    {
-      id: 'tx_1',
-      type: 'Deposit',
-      token: 'BTC',
-      amount: 0.05,
-      fiatAmount: 3200.50,
-      status: 'Confirmed',
-      counterparty: '0b12170077278d654',
-      timestamp: '15 mins ago',
-      dateGroup: 'Today'
-    },
-    {
-      id: 'tx_2',
-      type: 'Sell P2P',
-      token: 'USDT',
-      amount: -250,
-      fiatAmount: 250,
-      status: 'Confirmed',
-      counterparty: '052380577D04a8b',
-      timestamp: '15 mins ago',
-      dateGroup: 'Today'
-    },
-    {
-      id: 'tx_3',
-      type: 'Send',
-      token: 'ETH',
-      amount: -1.2,
-      fiatAmount: 3400.00,
-      status: 'Confirmed',
-      counterparty: '0xabc123...',
-      timestamp: '10:30 AM',
-      dateGroup: 'Yesterday'
-    },
-    {
-      id: 'tx_4',
-      type: 'Receive',
-      token: 'BNB',
-      amount: 4.5,
-      fiatAmount: 2100.00,
-      status: 'Confirmed',
-      counterparty: '0xdef456...',
-      timestamp: '09:15 AM',
-      dateGroup: 'Yesterday'
-    }
-  ],
+  transactions: [],
 
   setUserId: (id) => set({ userId: id }),
   setEmail: (email) => set({ email }),

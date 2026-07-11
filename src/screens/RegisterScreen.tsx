@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
 import { CloudVoidTheme } from '../theme/tokens';
+import { API_BASE_URL } from '../services/web3Api';
 
 type RegisterStep = 'email' | 'details';
 
@@ -14,6 +15,7 @@ export default function RegisterScreen({ navigation }: any) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEmailValid = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
   
@@ -46,10 +48,27 @@ export default function RegisterScreen({ navigation }: any) {
     setStep('details');
   };
 
-  const handleCreateAccount = () => {
-    if (!isStep2Valid) return;
-    // Dispatch mock registration request
-    navigation.navigate('EmailVerify', { email, username });
+  const handleCreateAccount = async () => {
+    if (!isStep2Valid || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await response.json();
+      setIsSubmitting(false);
+
+      if (response.ok && data.success) {
+        navigation.navigate('EmailVerify', { email, username });
+      } else {
+        Alert.alert('Registration Error', data.error || 'Failed to send verification code. Please try again.');
+      }
+    } catch (error) {
+      setIsSubmitting(false);
+      Alert.alert('Network Error', 'Could not connect to registration server. Please try again.');
+    }
   };
 
   const handleSocialAuth = (provider: string) => {
@@ -140,13 +159,13 @@ export default function RegisterScreen({ navigation }: any) {
         <TouchableOpacity
           style={[
             styles.nextBtn,
-            { backgroundColor: isStep2Valid ? CloudVoidTheme.colors.accent : '#2a2a2a' }
+            { backgroundColor: isStep2Valid && !isSubmitting ? CloudVoidTheme.colors.accent : '#2a2a2a' }
           ]}
           onPress={handleCreateAccount}
-          disabled={!isStep2Valid}
+          disabled={!isStep2Valid || isSubmitting}
         >
-          <Text style={[styles.nextBtnText, { color: isStep2Valid ? CloudVoidTheme.colors.textPrimary : CloudVoidTheme.colors.textSecondary }]}>
-            Create Account
+          <Text style={[styles.nextBtnText, { color: isStep2Valid && !isSubmitting ? CloudVoidTheme.colors.textPrimary : CloudVoidTheme.colors.textSecondary }]}>
+            {isSubmitting ? 'Sending OTP...' : 'Create Account'}
           </Text>
         </TouchableOpacity>
       </ScrollView>

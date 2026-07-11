@@ -4,6 +4,7 @@ import { CloudVoidTheme } from '../theme/tokens';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useWalletStore } from '../stores/walletStore';
+import { API_BASE_URL } from '../services/web3Api';
 
 interface HardwareDevice {
   id: string;
@@ -64,7 +65,7 @@ export default function ConnectHardwareWalletScreen({ navigation }: any) {
         
         // Register via API
         try {
-          const response = await fetch('http://localhost:3000/api/wallet/register', {
+          const response = await fetch(`${API_BASE_URL}/api/wallet/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ address: simulatedHardwareAddress, importMethod: 'hardware_wallet' })
