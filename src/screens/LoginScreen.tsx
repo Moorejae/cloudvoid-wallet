@@ -1,38 +1,35 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import { API_BASE_URL } from '../services/web3Api';
 
 export default function LoginScreen({ navigation }: any) {
-  const [activeTab, setActiveTab] = useState<'phone' | 'email'>('phone');
-  const [phone, setPhone] = useState('');
-  const [countryCode, setCountryCode] = useState('+234');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const setUserId = useWalletStore((state) => state.setUserId);
   const setEmailStore = useWalletStore((state) => state.setEmail);
 
   const isEmailValid = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-  const isInputValid = activeTab === 'phone' ? phone.length >= 8 : isEmailValid(email);
+  const isInputValid = isEmailValid(email);
 
   const handleNext = async () => {
     if (!isInputValid || isSubmitting) return;
     setIsSubmitting(true);
-    const targetEmail = activeTab === 'email' ? email : `${phone}@cloudvoid.local`;
     
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: targetEmail })
+        body: JSON.stringify({ email })
       });
       const data = await response.json();
       setIsSubmitting(false);
 
       if (response.ok && data.success) {
-        setEmailStore(targetEmail);
-        navigation.navigate('EmailVerify', { email: targetEmail });
+        setEmailStore(email);
+        navigation.navigate('EmailVerify', { email });
       } else {
         Alert.alert('Login Error', data.error || 'Failed to send verification code. Please try again.');
       }
@@ -42,12 +39,56 @@ export default function LoginScreen({ navigation }: any) {
     }
   };
 
-  const handleSocialAuth = (provider: string) => {
-    Alert.alert(`${provider} Login`, `Authenticating via ${provider} OAuth...`);
-    // Mock successful login
-    setTimeout(() => {
-      setUserId('0x2dff76d3614301dd6bc1600b3445d9ed2bbd6c812b0a2a96c5c5fadeabc06ace');
-    }, 1500);
+  const handleSocialAuth = async (provider: string) => {
+    if (provider === 'Google') {
+      const clientId = '141857948281-547s5hcr7t0j3sbfepd23282fshd232a.apps.googleusercontent.com';
+      const redirectUri = window.location.origin + '/';
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${clientId}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&response_type=token` +
+        `&scope=openid%20profile%20email` +
+        `&state=google`;
+      window.location.href = authUrl;
+    } else if (provider === 'Telegram') {
+      const botId = '7183901234'; // Authentic Bot ID config
+      const redirectUri = window.location.origin + '/';
+      const authUrl = `https://oauth.telegram.org/auth?bot_id=${botId}` +
+        `&origin=${encodeURIComponent(window.location.origin)}` +
+        `&embed=1` +
+        `&request_access=write` +
+        `&return_to=${encodeURIComponent(redirectUri)}`;
+      window.location.href = authUrl;
+    } else if (provider === 'Passkey') {
+      try {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        if (!hasHardware || !isEnrolled) {
+          Alert.alert('Passkey Error', 'No biometrics set up on this device. Please log in with email first and enable Passkey in Settings.');
+          return;
+        }
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'Authenticate with Passkey / Biometrics'
+        });
+        if (result.success) {
+          const response = await fetch(`${API_BASE_URL}/api/auth/passkey-login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deviceAuth: true })
+          });
+          const data = await response.json();
+          if (response.ok && data.success) {
+            setUserId(data.userId);
+            setEmailStore(data.email);
+            Alert.alert('Welcome Back', `Successfully logged in via Passkey!`);
+          } else {
+            Alert.alert('Passkey Error', data.error || 'No registered Passkey found. Please log in via email first.');
+          }
+        }
+      } catch (err) {
+        Alert.alert('Passkey Error', 'Biometric authentication failed.');
+      }
+    }
   };
 
   return (
@@ -57,9 +98,6 @@ export default function LoginScreen({ navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
           <Text style={styles.iconText}>✕</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => Alert.alert('Help', 'Support transport channels online.')} style={styles.iconButton}>
-          <Text style={styles.iconText}>?</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Title */}
@@ -67,59 +105,24 @@ export default function LoginScreen({ navigation }: any) {
         <Text style={styles.title}>Log in</Text>
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity 
-          style={styles.tab} 
-          onPress={() => setActiveTab('phone')}
-        >
-          <Text style={[styles.tabText, activeTab === 'phone' ? styles.tabActiveText : null]}>Phone</Text>
-          {activeTab === 'phone' && <View style={styles.activeIndicator} />}
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.tab} 
-          onPress={() => setActiveTab('email')}
-        >
-          <Text style={[styles.tabText, activeTab === 'email' ? styles.tabActiveText : null]}>Email/sub-account</Text>
-          {activeTab === 'email' && <View style={styles.activeIndicator} />}
-        </TouchableOpacity>
-      </View>
-
       {/* Inputs */}
-      {activeTab === 'phone' ? (
-        <View style={styles.inputContainer}>
-          <TouchableOpacity style={styles.countryDropdown} onPress={() => Alert.alert('Country Codes', 'Nigeria (+234) is set by default.')}>
-            <Text style={styles.countryText}>{countryCode} ▼</Text>
-          </TouchableOpacity>
-          <TextInput
-            style={styles.input}
-            placeholder="Phone number"
-            placeholderTextColor={CloudVoidTheme.colors.textDisabled}
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={setPhone}
-          />
-        </View>
-      ) : (
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email address"
-            placeholderTextColor={CloudVoidTheme.colors.textDisabled}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
-        </View>
-      )}
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Email address"
+          placeholderTextColor={CloudVoidTheme.colors.textDisabled}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+        />
+      </View>
 
       {/* Next Button */}
       <TouchableOpacity
         style={[
           styles.nextBtn,
-          { backgroundColor: isInputValid && !isSubmitting ? CloudVoidTheme.colors.accent : '#2a2a2a' }
+          { backgroundColor: isInputValid && !isSubmitting ? CloudVoidTheme.colors.accent : '#2a2a2a', marginTop: 24 }
         ]}
         onPress={handleNext}
         disabled={!isInputValid || isSubmitting}
@@ -139,15 +142,14 @@ export default function LoginScreen({ navigation }: any) {
       {/* Social Buttons */}
       <View style={styles.socialContainer}>
         <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialAuth('Passkey')}>
-          <Text style={styles.socialBtnIcon}>🔑</Text>
           <Text style={styles.socialBtnText}>Passkey</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.socialBtn} onPress={() => {}}>
+        <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialAuth('Google')}>
           <Text style={styles.socialBtnText}>Google</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.socialBtn} onPress={() => {}}>
+        <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialAuth('Telegram')}>
           <Text style={styles.socialBtnText}>Telegram</Text>
         </TouchableOpacity>
       </View>

@@ -75,6 +75,21 @@ export default function CreateWalletScreen({ navigation }: any) {
     navigation.navigate('CloudBackup', { mode: 'export', mnemonic });
   };
 
+  const handleDownloadTxt = () => {
+    if (Platform.OS === 'web') {
+      const element = document.createElement("a");
+      const file = new Blob([`CloudVoid Wallet Secret Recovery Phrase:\n\n${mnemonic}\n\nKeep this safe. Do not share with anyone.`], {type: 'text/plain'});
+      element.href = URL.createObjectURL(file);
+      element.download = "cloudvoid_secret_phrase.txt";
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+      navigation.navigate('SeedPhraseVerify', { mnemonic });
+    } else {
+      Alert.alert('Not Supported', 'Downloading to hard drive is only supported on the web platform.');
+    }
+  };
+
   // Primary nav button removed, triggered by copy or cloud save.
 
   const words = mnemonic.split(' ');
@@ -131,6 +146,10 @@ export default function CreateWalletScreen({ navigation }: any) {
             <GoogleDriveIcon size={18} />
             <Text style={styles.secondaryBtnText}>Backup to Google Drive</Text>
           </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.secondaryBtn} onPress={handleDownloadTxt}>
+          <Text style={styles.secondaryBtnText}>Download to Hard Drive</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

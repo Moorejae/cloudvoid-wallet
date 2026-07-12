@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Image, Alert } from 'react-native';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import { TRANSLATIONS } from '../utils/translations';
+import { API_BASE_URL } from '../services/web3Api';
 
 const TAGLINES = [
   "WAKE UP, INVEST, SLEEP.",
@@ -16,6 +17,8 @@ export default function WelcomeScreen({ navigation }: any) {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const selectedLanguage = useWalletStore((state) => state.selectedLanguage);
+  const setUserId = useWalletStore((state) => state.setUserId);
+  const setEmailStore = useWalletStore((state) => state.setEmail);
   const t = (Platform.OS === 'web' && selectedLanguage !== 'English')
     ? TRANSLATIONS.English 
     : (TRANSLATIONS[selectedLanguage] || TRANSLATIONS.English);
@@ -83,16 +86,16 @@ export default function WelcomeScreen({ navigation }: any) {
       <View style={styles.buttonRow}>
         <TouchableOpacity 
           style={[styles.btn, styles.loginBtn, CloudVoidTheme.shadows.neonDark]}
-          onPress={() => navigation.navigate('Login')}
+          onPress={() => navigation.navigate('ImportWallet')}
         >
-          <Text style={styles.btnText}>{t.login}</Text>
+          <Text style={styles.btnText}>Import Wallet</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={[styles.btn, styles.registerBtn, CloudVoidTheme.shadows.neonViolet]}
-          onPress={() => navigation.navigate('Register')}
+          onPress={() => navigation.navigate('CreateWallet')}
         >
-          <Text style={styles.btnText}>{t.register}</Text>
+          <Text style={styles.btnText}>Create Account</Text>
         </TouchableOpacity>
       </View>
     </View>

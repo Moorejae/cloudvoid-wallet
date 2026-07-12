@@ -13,96 +13,7 @@ const TOKEN_ICONS: Record<string, string> = {
   BNB: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/binance/info/logo.png',
 };
 
-// Hardcoded data to perfectly match the design visual
-const mockData = [
-  { type: 'header', title: 'Today', id: 'h1' },
-  {
-    type: 'row',
-    id: 'r1',
-    items: [
-      {
-        id: 't1',
-        token: 'BTC',
-        title: 'Deposit BTC',
-        time: '15 mins ago',
-        amount: '+0.05 BTC',
-        amountColor: '#22c55e',
-        hash: '0b12170077278...',
-        style: 'vertical'
-      },
-      {
-        id: 't2',
-        token: 'USDT',
-        title: 'Sell P2P USDT',
-        time: '15 mins ago',
-        amount: '-250 USDT',
-        amountColor: '#ef4444',
-        hash: '052380577D04...',
-        style: 'vertical'
-      }
-    ]
-  },
-  { type: 'header', title: 'Yesterday', id: 'h2' },
-  {
-    type: 'row',
-    id: 'r2',
-    items: [
-      {
-        id: 't3',
-        token: 'BTC',
-        title: 'Bitcoin',
-        price: '$90,121.75',
-        delta: '-R',
-        deltaColor: '#ef4444',
-        style: 'horizontal'
-      },
-      {
-        id: 't4',
-        token: 'USDT',
-        title: 'Tether',
-        price: '-28 USDT',
-        style: 'horizontal'
-      }
-    ]
-  },
-  {
-    type: 'row',
-    id: 'r3',
-    items: [
-      {
-        id: 't5',
-        token: 'ETH',
-        title: 'Ethereum',
-        price: '$127.73',
-        delta: '-0.58%',
-        deltaColor: '#ef4444',
-        style: 'horizontal'
-      },
-      {
-        id: 't6',
-        token: 'BNB',
-        title: 'BNB',
-        price: '$35.98',
-        delta: '+2.0%',
-        deltaColor: '#ef4444',
-        style: 'horizontal'
-      }
-    ]
-  },
-  { type: 'header', title: 'Oct 26', id: 'h3' },
-  {
-    type: 'row',
-    id: 'r4',
-    items: [
-      {
-        id: 't7',
-        token: 'USDT',
-        title: 'Sell T...',
-        style: 'horizontal'
-      }
-    ]
-  }
-];
+// Removed hardcoded mockData. We now dynamically format storeTransactions from walletStore.
 
 export default function HistoryScreen() {
   const navigation = useNavigation<any>();
@@ -130,6 +41,46 @@ export default function HistoryScreen() {
     { id: 'Send', label: 'Withdraws / Send', icon: 'arrow-up', color: '#ef4444' },
     { id: 'Market', label: 'Market Prices', icon: 'bar-chart', color: '#f59e0b' },
   ];
+
+  const storeTransactions = useWalletStore((state) => state.transactions);
+
+  const mockData = React.useMemo(() => {
+    const grouped: Record<string, any[]> = {};
+    if (!storeTransactions || storeTransactions.length === 0) {
+      return [];
+    }
+    
+    storeTransactions.forEach(tx => {
+      const dateStr = tx.dateGroup || 'Today';
+      if (!grouped[dateStr]) grouped[dateStr] = [];
+      grouped[dateStr].push({
+        id: tx.id,
+        token: tx.token,
+        title: `${tx.type} ${tx.token}`,
+        time: tx.timestamp || 'Just now',
+        amount: `${tx.type === 'Receive' ? '+' : '-'}${tx.amount} ${tx.token}`,
+        amountColor: tx.type === 'Receive' ? '#22c55e' : '#ef4444',
+        hash: tx.id.slice(0,10) + '...',
+        style: 'vertical'
+      });
+    });
+
+    const result: any[] = [];
+    let counter = 0;
+    Object.keys(grouped).forEach((date, i) => {
+      result.push({ type: 'header', title: date, id: `h${i}` });
+      const items = grouped[date];
+      for (let j = 0; j < items.length; j += 2) {
+        result.push({
+          type: 'row',
+          id: `r${counter++}`,
+          items: items.slice(j, j + 2)
+        });
+      }
+    });
+
+    return result;
+  }, [storeTransactions]);
 
   // Filtering Logic
   const filteredData = mockData.map(group => {

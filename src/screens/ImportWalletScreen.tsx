@@ -100,12 +100,22 @@ export default function ImportWalletScreen({ navigation }: any) {
           </View>
 
           <TouchableOpacity 
-            style={[styles.secondaryBtn, { marginBottom: 24 }]} 
+            style={[styles.secondaryBtn, { marginBottom: 12 }]} 
             onPress={() => navigation.navigate('CloudBackup', { mode: 'import' })}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <GoogleDriveIcon size={18} />
               <Text style={styles.secondaryBtnText}>Import from Google Drive</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.secondaryBtn, { marginBottom: 24 }]} 
+            onPress={() => navigation.navigate('ConnectHardwareWallet')}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="hardware-chip-outline" size={18} color={CloudVoidTheme.colors.textPrimary} />
+              <Text style={styles.secondaryBtnText}>Connect Hardware Wallet</Text>
             </View>
           </TouchableOpacity>
 

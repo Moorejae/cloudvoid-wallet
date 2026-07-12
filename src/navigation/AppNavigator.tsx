@@ -220,9 +220,6 @@ function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-      <Stack.Screen name="EmailVerify" component={EmailVerifyScreen} />
       <Stack.Screen name="WalletSetup" component={WalletSetupScreen} />
       <Stack.Screen name="ImportWallet" component={ImportWalletScreen} />
       <Stack.Screen name="CreateWallet" component={CreateWalletScreen} />
@@ -270,16 +267,7 @@ function MainTabNavigator() {
           ),
         }}
       />
-      <Tab.Screen
-        name="FiatHub"
-        component={FiatHubScreen}
-        options={{
-          tabBarLabel: 'Fiat Hub',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="card-outline" size={size || 24} color={color} />
-          ),
-        }}
-      />
+
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}

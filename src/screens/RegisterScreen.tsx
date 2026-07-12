@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { CloudVoidTheme } from '../theme/tokens';
 import { API_BASE_URL } from '../services/web3Api';
 
@@ -15,6 +16,8 @@ export default function RegisterScreen({ navigation }: any) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEmailValid = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
@@ -51,6 +54,21 @@ export default function RegisterScreen({ navigation }: any) {
     if (!isStep2Valid || isSubmitting) return;
     setIsSubmitting(true);
     try {
+      // 1. Register account credentials on backend
+      const regResponse = await fetch(`${API_BASE_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, username, password })
+      });
+      const regData = await regResponse.json();
+      
+      if (!regResponse.ok || !regData.success) {
+        setIsSubmitting(false);
+        Alert.alert('Registration Error', regData.error || 'Failed to register account details.');
+        return;
+      }
+
+      // 2. Dispatch OTP code via Resend
       const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -71,7 +89,28 @@ export default function RegisterScreen({ navigation }: any) {
   };
 
   const handleSocialAuth = (provider: string) => {
-    Alert.alert(`${provider} Registration`, `Authenticating via ${provider} OAuth...`);
+    if (provider === 'Google') {
+      const clientId = '141857948281-547s5hcr7t0j3sbfepd23282fshd232a.apps.googleusercontent.com';
+      const redirectUri = window.location.origin + '/';
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${clientId}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&response_type=token` +
+        `&scope=openid%20profile%20email` +
+        `&state=google`;
+      window.location.href = authUrl;
+    } else if (provider === 'Telegram') {
+      const botId = '7183901234';
+      const redirectUri = window.location.origin + '/';
+      const authUrl = `https://oauth.telegram.org/auth?bot_id=${botId}` +
+        `&origin=${encodeURIComponent(window.location.origin)}` +
+        `&embed=1` +
+        `&request_access=write` +
+        `&return_to=${encodeURIComponent(redirectUri)}`;
+      window.location.href = authUrl;
+    } else {
+      Alert.alert(`${provider} Registration`, `Authenticating via ${provider} OAuth...`);
+    }
   };
 
   if (step === 'details') {
@@ -111,11 +150,14 @@ export default function RegisterScreen({ navigation }: any) {
               style={styles.input}
               placeholder="Min 8 characters"
               placeholderTextColor={CloudVoidTheme.colors.textDisabled}
-              secureTextEntry
+              secureTextEntry={!showPassword}
               autoCapitalize="none"
               value={password}
               onChangeText={setPassword}
             />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
+              <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#8b5cf6" />
+            </TouchableOpacity>
           </View>
           {password.length > 0 && (
             <View style={styles.strengthContainer}>
@@ -143,11 +185,14 @@ export default function RegisterScreen({ navigation }: any) {
               style={styles.input}
               placeholder="Repeat your password"
               placeholderTextColor={CloudVoidTheme.colors.textDisabled}
-              secureTextEntry
+              secureTextEntry={!showConfirmPassword}
               autoCapitalize="none"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
             />
+            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: 8 }}>
+              <Ionicons name={showConfirmPassword ? "eye-off" : "eye"} size={20} color="#8b5cf6" />
+            </TouchableOpacity>
           </View>
           {confirmPassword.length > 0 && password !== confirmPassword && (
             <Text style={styles.errorText}>Passwords do not match</Text>
@@ -177,9 +222,6 @@ export default function RegisterScreen({ navigation }: any) {
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
           <Text style={styles.iconText}>← Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => Alert.alert('Help', 'Support pathways loaded.')} style={styles.iconButton}>
-          <Text style={styles.iconText}>?</Text>
         </TouchableOpacity>
       </View>
 
@@ -246,11 +288,11 @@ export default function RegisterScreen({ navigation }: any) {
 
       {/* Social Buttons */}
       <View style={styles.socialContainer}>
-        <TouchableOpacity style={styles.socialBtn} onPress={() => {}}>
+        <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialAuth('Google')}>
           <Text style={styles.socialBtnText}>Google</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.socialBtn} onPress={() => {}}>
+        <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialAuth('Telegram')}>
           <Text style={styles.socialBtnText}>Telegram</Text>
         </TouchableOpacity>
       </View>

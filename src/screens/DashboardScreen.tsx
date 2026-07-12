@@ -71,24 +71,38 @@ export default function DashboardScreen({ navigation }: any) {
   const symbol = CURRENCY_SYMBOLS[selectedCurrency] || '$';
   const rate = CURRENCY_RATES[selectedCurrency] || 1;
 
-  // Interval for real-time price ticks simulation
+  // Fetch real-time tokens from backend
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTokens((prev) =>
-        prev.map((t) => {
-          if (t.symbol === 'USDT') return t;
-          const factor = 1 + (Math.random() - 0.5) * 0.002;
-          const newPrice = Number((t.price * factor).toFixed(2));
-          const change = Number((t.change + (factor - 1) * 100).toFixed(2));
+    let interval: NodeJS.Timeout;
+    
+    const loadRealData = async () => {
+      try {
+        const { fetchWalletAssets } = require('../services/web3Api');
+        const data = await fetchWalletAssets();
+        if (data && data.assets) {
+          const mappedTokens = data.assets.map((asset: any) => ({
+            symbol: asset.symbol,
+            name: asset.name,
+            price: asset.price,
+            change: asset.change24h,
+            iconUrl: asset.icon,
+            sparklineData: [40, 45, 42, 50, 48, 55, 60]
+          }));
+          setTokens(mappedTokens);
           
-          // Move sparkline data
-          const newSparkline = [...t.sparklineData.slice(1)];
-          newSparkline.push(newSparkline[newSparkline.length - 1] * factor);
+          const newBalances: Record<string, number> = {};
+          data.assets.forEach((asset: any) => {
+            newBalances[asset.symbol] = asset.balance;
+          });
+          useWalletStore.getState().setBalances(newBalances);
+        }
+      } catch (err) {
+        console.warn('Error fetching real data:', err);
+      }
+    };
 
-          return { ...t, price: newPrice, change, sparklineData: newSparkline };
-        })
-      );
-    }, 4000);
+    loadRealData();
+    interval = setInterval(loadRealData, 15000);
 
     return () => clearInterval(interval);
   }, []);
