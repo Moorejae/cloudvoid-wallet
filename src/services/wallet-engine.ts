@@ -4,6 +4,8 @@ import * as ecc from 'tiny-secp256k1';
 import { ethers } from 'ethers';
 // @ts-ignore - Assuming these will be polyfilled or mocked if native modules fail
 import * as bitcoin from 'bitcoinjs-lib';
+import { Keypair } from '@solana/web3.js';
+import TronWeb from 'tronweb';
 
 // Initialize BIP32
 const bip32 = BIP32Factory(ecc);
@@ -58,22 +60,43 @@ export function deriveWalletsFromSeed(mnemonic: string): DerivedWallet[] {
   }
 
   // 3. Solana
-  // Solana uses Ed25519, which isn't standard BIP32. Usually requires ed25519-hd-key.
-  // Mocking for now to avoid native crypto crash before polyfills are fully verified.
-  wallets.push({
-    network: 'Solana',
-    address: 'mock_solana_address_' + seed.subarray(0, 4).toString('hex'),
-    privateKey: 'mock_sol_priv'
-  });
+  try {
+    const solKeypair = Keypair.fromSeed(seed.subarray(0, 32));
+    wallets.push({
+      network: 'Solana',
+      address: solKeypair.publicKey.toString(),
+      privateKey: Buffer.from(solKeypair.secretKey).toString('hex')
+    });
+  } catch (err) {
+    console.error('Failed to derive Solana address:', err);
+    wallets.push({
+      network: 'Solana',
+      address: 'mock_solana_address_' + seed.subarray(0, 4).toString('hex'),
+      privateKey: 'mock_sol_priv'
+    });
+  }
 
   // 4. Tron
-  // Tron uses same secp256k1 as Ethereum, but different address format (Base58check)
-  const tronNode = rootNode.derivePath("m/44'/195'/0'/0/0");
-  wallets.push({
-    network: 'Tron',
-    address: 'Tmock_tron_address_' + seed.subarray(0, 4).toString('hex'),
-    privateKey: tronNode.privateKey?.toString('hex') || ''
-  });
+  try {
+    const tronPrivateKey = rootNode.derivePath("m/44'/195'/0'/0/0").privateKey?.toString('hex');
+    if (tronPrivateKey) {
+      const address = TronWeb.address.fromPrivateKey(tronPrivateKey);
+      wallets.push({
+        network: 'Tron',
+        address: address,
+        privateKey: tronPrivateKey
+      });
+    } else {
+      throw new Error('Tron private key generation failed');
+    }
+  } catch (err) {
+    console.error('Failed to derive Tron address:', err);
+    wallets.push({
+      network: 'Tron',
+      address: 'Tmock_tron_address_' + seed.subarray(0, 4).toString('hex'),
+      privateKey: ''
+    });
+  }
 
   return wallets;
 }

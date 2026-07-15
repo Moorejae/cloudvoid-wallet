@@ -21,7 +21,6 @@ import SeedPhraseVerifyScreen from '../screens/SeedPhraseVerifyScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import TokenDetailScreen from '../screens/TokenDetailScreen';
 import HistoryScreen from '../screens/HistoryScreen';
-import FiatHubScreen from '../screens/FiatHubScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import TwoFASetupScreen from '../screens/TwoFASetupScreen';
 import AddCustomRPCScreen from '../screens/AddCustomRPCScreen';
@@ -31,28 +30,7 @@ import CurrencySelectionScreen from '../screens/CurrencySelectionScreen';
 import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
 import ThemeModeScreen from '../screens/ThemeModeScreen';
 import TransactionReceiptScreen from '../screens/TransactionReceiptScreen';
-import VirtualCardScreen from '../screens/VirtualCardScreen';
-import CardInfoScreen from '../screens/CardInfoScreen';
-import FundCardScreen from '../screens/FundCardScreen';
-import TopUpUSDTScreen from '../screens/TopUpUSDTScreen';
-import SetLimitScreen from '../screens/SetLimitScreen';
-import TerminateAccountScreen from '../screens/TerminateAccountScreen';
-import FiatTransactionListScreen from '../screens/FiatTransactionListScreen';
-import IssueCardScreen from '../screens/IssueCardScreen';
-import ConvertFiatScreen from '../screens/ConvertFiatScreen';
-import MerchantFinderScreen from '../screens/MerchantFinderScreen';
-import MerchantOnboardingScreen from '../screens/MerchantOnboardingScreen';
-import LegalDocumentScreen from '../screens/LegalDocumentScreen';
-import UserAccountDashboardScreen from '../screens/UserAccountDashboardScreen';
-import ActiveTradeChatScreen from '../screens/ActiveTradeChatScreen';
-import P2PTransactionHistoryScreen from '../screens/P2PTransactionHistoryScreen';
-import P2PTransactionDetailsScreen from '../screens/P2PTransactionDetailsScreen';
-import AddPaymentMethodScreen from '../screens/AddPaymentMethodScreen';
-import MerchantDashboardScreen from '../screens/MerchantDashboardScreen';
-import JuryCenterScreen from '../screens/JuryCenterScreen';
-import ArbitrationRequestScreen from '../screens/ArbitrationRequestScreen';
-import ArbitrationLedgerScreen from '../screens/ArbitrationLedgerScreen';
-import LiquidityPricingSetupScreen from '../screens/LiquidityPricingSetupScreen';
+import Web3PortalScreen from '../screens/Web3PortalScreen';
 
 // Modal Group Screens
 import SendScreen from '../screens/SendScreen';
@@ -60,7 +38,6 @@ import ReceiveScreen from '../screens/ReceiveScreen';
 import SwapScreen from '../screens/SwapScreen';
 import CloudBackupScreen from '../screens/CloudBackupScreen';
 import ConnectHardwareWalletScreen from '../screens/ConnectHardwareWalletScreen';
-import FiatOnRampScreen from '../screens/FiatOnRampScreen';
 
 // Web3 Flow Screens
 import DAppsScreen from '../screens/DAppsScreen';
@@ -69,9 +46,6 @@ import CryptoTradingScreen from '../screens/CryptoTradingScreen';
 import SwapConfirmationScreen from '../screens/SwapConfirmationScreen';
 import WalletConnectScannerScreen from '../screens/WalletConnectScannerScreen';
 import QRModalScreen from '../screens/QRModalScreen';
-import P2PBrokerScreen from '../screens/P2PBrokerScreen';
-import OrderActiveScreen from '../screens/OrderActiveScreen';
-import DisputeScreen from '../screens/DisputeScreen';
 
 // Import Floating AI assistant
 import AIBrain from '../components/AIBrain';
@@ -267,7 +241,15 @@ function MainTabNavigator() {
           ),
         }}
       />
-
+      <Tab.Screen
+        name="Web3"
+        component={Web3PortalScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="compass-outline" size={size || 24} color={color} />
+          ),
+        }}
+      />
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
@@ -281,55 +263,12 @@ function MainTabNavigator() {
   );
 }
 
-function Web3TabNavigator() {
-  return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarStyle: {
-          backgroundColor: 'rgba(5, 5, 20, 0.9)',
-          borderTopWidth: 1,
-          borderTopColor: 'rgba(255, 255, 255, 0.05)',
-          height: 64,
-          elevation: 0,
-          paddingBottom: 10,
-        },
-        tabBarShowLabel: true,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginBottom: 6 },
-        tabBarActiveTintColor: '#fff',
-        tabBarInactiveTintColor: 'rgba(255,255,255,0.4)',
-        headerShown: false,
-      }}
-    >
-      <Tab.Screen
-        name="DApps"
-        component={DAppsScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="compass-outline" size={22} color={color} />,
-        }}
-      />
-      <Tab.Screen
-        name="Crypto Trade"
-        component={CryptoTradingScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="swap-horizontal" size={22} color={color} />,
-        }}
-      />
-    </Tab.Navigator>
-  );
-}
-
 export default function AppNavigator() {
   const userId = useWalletStore((state) => state.userId);
   const [currentRoute, setCurrentRoute] = useState('Wallet');
 
   const blockedRoutes = [
-    'FiatHub', 'VirtualCard', 'CardInfo', 'FundCard', 'TopUpUSDT', 'SetLimit', 
-    'TerminateAccount', 'FiatTransactionList', 'IssueCard', 'ConvertFiat', 
-    'MerchantFinder', 'MerchantOnboarding', 'MerchantDashboard', 'UserAccountDashboard', 'JuryCenter', 
-    'ArbitrationRequest', 'ArbitrationLedger', 'ActiveTradeChat', 'P2PTransactionHistory', 
-    'P2PTransactionDetails', 'AddPaymentMethod', 'LiquidityPricingSetup', 'FiatOnRamp', 
-    'P2PBroker', 'OrderActive', 'Dispute',
-    'DApps', 'Crypto Trade', 'DAppDetail', 'SwapConfirmation', 'Web3Flow', 'WalletConnectScanner'
+    'TerminateAccount', 'DAppDetail', 'SwapConfirmation', 'WalletConnectScanner'
   ];
   const showAI = userId && !blockedRoutes.includes(currentRoute);
 
@@ -353,45 +292,22 @@ export default function AppNavigator() {
           ) : (
             <Stack.Screen name="MainFlow" component={MainTabNavigator} />
           )}
-          <Stack.Screen name="Web3Flow" component={Web3TabNavigator} />
           
           {/* Modal overlay groups */}
           <Stack.Group screenOptions={{ presentation: 'modal' }}>
-            <Stack.Screen name="VirtualCard" component={VirtualCardScreen} />
-            <Stack.Screen name="CardInfo" component={CardInfoScreen} />
-            <Stack.Screen name="FundCard" component={FundCardScreen} />
-            <Stack.Screen name="TopUpUSDT" component={TopUpUSDTScreen} />
-            <Stack.Screen name="SetLimit" component={SetLimitScreen} />
             <Stack.Screen name="TerminateAccount" component={TerminateAccountScreen} />
-            <Stack.Screen name="FiatTransactionList" component={FiatTransactionListScreen} />
-            <Stack.Screen name="IssueCard" component={IssueCardScreen} />
-            <Stack.Screen name="ConvertFiat" component={ConvertFiatScreen} />
-            <Stack.Screen name="MerchantFinder" component={MerchantFinderScreen} />
-            <Stack.Screen name="MerchantOnboarding" component={MerchantOnboardingScreen} />
             <Stack.Screen name="LegalDocument" component={LegalDocumentScreen} />
-            <Stack.Screen name="UserAccountDashboard" component={UserAccountDashboardScreen} />
-            <Stack.Screen name="MerchantDashboard" component={MerchantDashboardScreen} />
-            <Stack.Screen name="JuryCenter" component={JuryCenterScreen} />
-            <Stack.Screen name="ArbitrationRequest" component={ArbitrationRequestScreen} />
-            <Stack.Screen name="ArbitrationLedger" component={ArbitrationLedgerScreen} />
-            <Stack.Screen name="ActiveTradeChat" component={ActiveTradeChatScreen} />
-            <Stack.Screen name="P2PTransactionHistory" component={P2PTransactionHistoryScreen} />
-            <Stack.Screen name="P2PTransactionDetails" component={P2PTransactionDetailsScreen} />
-            <Stack.Screen name="AddPaymentMethod" component={AddPaymentMethodScreen} />
-            <Stack.Screen name="LiquidityPricingSetup" component={LiquidityPricingSetupScreen} />
             <Stack.Screen name="TransactionReceipt" component={TransactionReceiptScreen} />
             <Stack.Screen name="TokenDetail" component={TokenDetailScreen} />
             <Stack.Screen name="Send" component={SendScreen} />
             <Stack.Screen name="Receive" component={ReceiveScreen} />
             <Stack.Screen name="Swap" component={SwapScreen} />
-            <Stack.Screen name="FiatOnRamp" component={FiatOnRampScreen} />
             <Stack.Screen name="QRModal" component={QRModalScreen} />
             <Stack.Screen name="WalletConnectScanner" component={WalletConnectScannerScreen} />
+            <Stack.Screen name="DApps" component={DAppsScreen} />
+            <Stack.Screen name="CryptoTrading" component={CryptoTradingScreen} />
             <Stack.Screen name="DAppDetail" component={DAppDetailScreen} />
             <Stack.Screen name="SwapConfirmation" component={SwapConfirmationScreen} />
-            <Stack.Screen name="P2PBroker" component={P2PBrokerScreen} />
-            <Stack.Screen name="OrderActive" component={OrderActiveScreen} />
-            <Stack.Screen name="Dispute" component={DisputeScreen} />
             <Stack.Screen name="TwoFASetup" component={TwoFASetupScreen} />
             <Stack.Screen name="AddCustomRPC" component={AddCustomRPCScreen} />
             <Stack.Screen name="LocalLatencyPings" component={LocalLatencyPingsScreen} />

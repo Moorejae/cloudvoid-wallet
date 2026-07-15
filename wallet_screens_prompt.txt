@@ -1,0 +1,60 @@
+You are an expert React Native developer and UI/UX designer. I am building a next-generation Web3 crypto wallet called "CloudVoid Wallet". 
+
+The app features a sleek, dark-themed aesthetic with neon violet and green accents. Use a deep dark background (`#050514` or `#0a0a0a`) and vibrant accent colors (Violet `#a78bfa`, Success Green `#00D395`, Danger Red `#ef4444`). The UI should feel premium, modern, and highly polished with glassmorphism touches and smooth borders.
+
+Please generate the following 5 screens in React Native (Expo) using `react-native-svg` for icons and custom charts, and standard components (`View`, `Text`, `TouchableOpacity`, `ScrollView`, `Modal`).
+
+1. Dashboard Screen (Home Screen)
+- **Header**: Custom header with an "Add Wallet" icon button on the left, and a "Web3 Network" circular icon button on the right.
+- **Portfolio Card**: A large, elevated glassmorphism card displaying the total portfolio balance in the center (e.g., "$30,121.75"). Above the balance, show a pill-shaped badge indicating the active wallet (e.g., "Main Wallet"). Below the balance, show the 24h P&L in green (e.g., "+$2.75  +0.03%").
+- **Asset List**: Below the portfolio card, a section titled "Total Assets". Display a list of tokens (BTC, ETH, BNB, XMR, USDT). Each token row should show:
+  - Token Logo (circle).
+  - Token Name and Symbol.
+  - Current Price and 24h Percentage Change.
+  - A small SVG Sparkline chart on the right side indicating the 7-day price trend (green for positive trend, red for negative).
+- **Interactions**: Pull-to-refresh control on the scroll view. Tapping the portfolio card toggles the balance visibility (shows "••••••"). 
+
+2. Settings Screen
+- **Header**: A back button on the left with a chevron icon, and the title "Settings" in the center.
+- **List Items**: A scrollable list of settings options. Each option should have an icon on the left (inside a subtle colored box), a title, a subtitle, and a right chevron icon.
+- **Settings Categories**:
+  - Account Verification (Verify ID for FiatHub)
+  - Security (Biometrics, Passcode)
+  - Notification (Push and Email toggles)
+  - Network (Mainnet vs Testnet toggle)
+  - Wallet (Manage stored wallets)
+  - Preferences (Currency, Language, Dark Mode)
+  - Legal (Terms and Privacy)
+  - Logout (Destructive action, red icon and text)
+- **Interactions**: Tapping an item opens a Bottom Sheet Modal containing specific toggles (e.g., a Switch for Biometrics).
+
+3. Transaction Screen (History Screen)
+- **Header**: A header with the title "Transaction History" and a filter icon.
+- **Tabs**: Two tabs at the top: "Crypto" and "Fiat".
+- **List of Transactions**: A scrollable list of recent transactions grouped by date (e.g., "Today", "Yesterday").
+- **Transaction Item**: Each row should show:
+  - An icon indicating the type of transaction (Send, Receive, Swap, Buy).
+  - Title (e.g., "Received Ethereum" or "Swapped BTC for USDT").
+  - Date and time.
+  - The amount in crypto and the equivalent fiat value (green for receive, standard color for send).
+  - A status badge (Completed, Pending, Failed).
+
+4. Web3 Portal Screen
+- **Header**: Title "Web3 & DApps" with a search bar directly below it to search for DApps or URLs.
+- **Featured Section**: A horizontal scrolling carousel of featured DApps (e.g., Uniswap, PancakeSwap, OpenSea) showing a large banner image and title.
+- **Categories**: A grid or list of categories (DeFi, NFTs, Games, Exchanges).
+- **Recent Connections**: A list of recently connected DApps showing the DApp icon, name, and a green dot indicating an active connection.
+- **Interactions**: Tapping a DApp should simulate opening a webview or showing a connection prompt modal.
+
+5. Wallet Screen (Manage Wallets)
+- **Header**: Title "Manage Wallets" with a "+" button to add a new wallet.
+- **Total Balance**: A summary of all combined wallets at the top.
+- **Wallet Cards**: A vertical list of wallet cards. Each card represents a different wallet (e.g., "Multi-Coin Wallet 1", "Hardware Wallet").
+- **Card Details**: Inside each card, display:
+  - Wallet Name.
+  - Wallet Address (truncated, e.g., "0x12...abcd").
+  - Total Fiat Balance for that specific wallet.
+  - Three dot menu icon for actions (Rename, Delete, Backup Seed Phrase).
+- **Active State**: Highlight the currently active wallet with a subtle colored border and a checkmark icon.
+
+Please provide complete, cleanly structured React Native code for these screens. Use mock data where necessary. Focus heavily on UI aesthetics, spacing, and styling to match the premium dark theme described.

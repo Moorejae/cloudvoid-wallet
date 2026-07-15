@@ -53,12 +53,23 @@ function generateWalletAddress(networkId) {
       break;
 
     case 'bitcoin':
-      // Fallback robust mock generator since ECPair was removed from recent bitcoinjs-lib versions
-      const bChars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-      let btcAddr = '1';
-      for (let i = 0; i < 33; i++) btcAddr += bChars[Math.floor(Math.random() * bChars.length)];
-      address = btcAddr;
-      privateKey = 'L' + Array.from({length: 51}, () => bChars[Math.floor(Math.random() * bChars.length)]).join('');
+      try {
+        const btcWallet = ethers.Wallet.createRandom();
+        const publicKeyBuffer = Buffer.from(btcWallet.signingKey.compressedPublicKey.slice(2), 'hex');
+        const { address: btcAddress } = bitcoin.payments.p2wpkh({ 
+          pubkey: publicKeyBuffer, 
+          network: bitcoin.networks.bitcoin 
+        });
+        address = btcAddress || '';
+        privateKey = btcWallet.privateKey;
+      } catch (err) {
+        console.error('Failed to generate real Bitcoin address, falling back:', err);
+        const bChars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+        let btcAddr = 'bc1q';
+        for (let i = 0; i < 38; i++) btcAddr += bChars[Math.floor(Math.random() * bChars.length)];
+        address = btcAddr;
+        privateKey = '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+      }
       break;
 
     case 'solana':
@@ -68,12 +79,18 @@ function generateWalletAddress(networkId) {
       break;
       
     case 'tron':
-      // Fallback for TronWeb error
-      const tChars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-      let tAddr = 'T';
-      for (let i = 0; i < 33; i++) tAddr += tChars[Math.floor(Math.random() * tChars.length)];
-      address = tAddr;
-      privateKey = '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+      try {
+        const tronWallet = ethers.Wallet.createRandom();
+        address = TronWeb.address.fromPrivateKey(tronWallet.privateKey);
+        privateKey = tronWallet.privateKey;
+      } catch (err) {
+        console.error('Failed to generate real Tron address, falling back:', err);
+        const tChars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+        let tAddr = 'T';
+        for (let i = 0; i < 33; i++) tAddr += tChars[Math.floor(Math.random() * tChars.length)];
+        address = tAddr;
+        privateKey = '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+      }
       break;
       
     case 'aptos':
