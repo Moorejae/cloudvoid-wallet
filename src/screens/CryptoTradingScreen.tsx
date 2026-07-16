@@ -20,12 +20,13 @@ export default function CryptoTradingScreen() {
 
   const navigation = useNavigation<any>();
   const userTokens = useWalletStore(state => state.tokens);
+  const userId = useWalletStore(state => state.userId);
 
   useEffect(() => {
     const loadAllData = async () => {
       setLoadingData(true);
       const [bal, trend, news] = await Promise.all([
-        fetchWalletBalance(),
+        fetchWalletBalance(userId),
         fetchTrendingTokens(),
         fetchNewListings()
       ]);

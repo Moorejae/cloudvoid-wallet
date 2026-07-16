@@ -186,9 +186,11 @@ export async function executeSwap(fromToken: string, toToken: string, amount: nu
 }
 
 // 9. GET /api/wallet/balance
-export async function fetchWalletBalance(): Promise<{ balances: Record<string, number>; totalValueUSD: number } | null> {
+export async function fetchWalletBalance(userId: string): Promise<{ balances: Record<string, number>; totalValueUSD: number } | null> {
   try {
-    const res = await api.get('/api/wallet/balance');
+    const res = await api.get('/api/wallet/balance', {
+      headers: { Authorization: `Bearer ${userId}` }
+    });
     return res.data.data;
   } catch (err) {
     console.warn('fetchWalletBalance failed:', err);
@@ -197,9 +199,11 @@ export async function fetchWalletBalance(): Promise<{ balances: Record<string, n
 }
 
 // 10. GET /api/wallet/assets
-export async function fetchWalletAssets(): Promise<{ assets: WalletAsset[]; totalValueUSD: number } | null> {
+export async function fetchWalletAssets(userId: string): Promise<{ assets: WalletAsset[]; totalValueUSD: number } | null> {
   try {
-    const res = await api.get('/api/wallet/assets');
+    const res = await api.get('/api/wallet/assets', {
+      headers: { Authorization: `Bearer ${userId}` }
+    });
     return res.data.data;
   } catch (err) {
     console.warn('fetchWalletAssets failed:', err);

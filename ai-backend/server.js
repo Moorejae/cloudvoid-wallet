@@ -12,11 +12,22 @@ const cryptoData = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'cryp
 
 const { extractIntentAndEntities, extractAsset, extractNetwork } = require('./parser/intentEngine');
 const { getSession, updateSession, clearSession } = require('./stateManager');
-const { AUTHORIZED_NETWORKS, generateWalletAddress } = require('./services/cryptoService');
+const { AUTHORIZED_NETWORKS, deriveAllAddresses, fetchRealBalances } = require('./services/cryptoService');
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+
+// Store derived multi-chain addresses for sessions
+const walletStore = new Map();
+
+const checkAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    req.userId = authHeader.split(' ')[1];
+  }
+  next();
+};
 
 // ──────── Helpers ────────
 async function fetchCoinGeckoData(symbol) {
@@ -401,70 +412,90 @@ app.get('/api/prices', async (req, res) => {
 });
 
 // ──────── Wallet Endpoints ────────
-app.post('/api/wallet/register', (req, res) => {
-  const { address, importMethod } = req.body;
+app.post('/api/wallet/register', async (req, res) => {
+  const { address, mnemonic, importMethod } = req.body;
   
-  if (!address) {
-    return res.status(400).json({ error: 'Wallet address required' });
+  if (!address && !mnemonic) {
+    return res.status(400).json({ error: 'Wallet address or mnemonic required' });
   }
 
-  // Simulate wallet registration and fetch default tokens
-  const defaultTokens = [
-    { symbol: 'BTC', name: 'Bitcoin', price: 30121.75, change: 0.12, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', sparklineData: [40, 45, 42, 50, 48, 55, 60] },
-    { symbol: 'ETH', name: 'Ethereum', price: 121.73, change: -0.56, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [60, 55, 58, 45, 48, 40, 35] },
-    { symbol: 'BNB', name: 'BNB', price: 38.88, change: -0.03, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png', sparklineData: [45, 48, 42, 40, 38, 42, 38] },
-    { symbol: 'XMR', name: 'Monero', price: 107.23, change: 3.45, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/monero/info/logo.png', sparklineData: [20, 25, 30, 40, 50, 55, 60] },
-    { symbol: 'USDT', name: 'Ethereum', price: 100.00, change: -3.08, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [50, 52, 48, 49, 45, 42, 40] }
-  ];
+  try {
+    let addresses = { eth: address };
+    if (mnemonic) {
+      addresses = await deriveAllAddresses(mnemonic);
+    }
 
-  return res.json({
-    success: true,
-    message: 'Wallet registered successfully',
-    wallet: { address, method: importMethod || 'create' },
-    tokens: defaultTokens
-  });
+    // Save multi-chain addresses linked to the main EVM token ID
+    const primaryId = addresses.eth || address;
+    walletStore.set(primaryId, addresses);
+
+    // Initial quick fetch of balances
+    const balances = await fetchRealBalances(addresses);
+
+    const defaultTokens = [
+      { symbol: 'BTC', name: 'Bitcoin', price: 64210.50, balance: balances.BTC || 0, valueUSD: (balances.BTC || 0) * 64210.50, iconUrl: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png', change: 1.25 },
+      { symbol: 'ETH', name: 'Ethereum', price: 3485.20, balance: balances.ETH || 0, valueUSD: (balances.ETH || 0) * 3485.20, iconUrl: 'https://cryptologos.cc/logos/ethereum-eth-logo.png', change: -0.52 },
+      { symbol: 'BNB', name: 'BNB', price: 575.30, balance: balances.BNB || 0, valueUSD: (balances.BNB || 0) * 575.30, iconUrl: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png', change: 0.85 },
+      { symbol: 'SOL', name: 'Solana', price: 145.80, balance: balances.SOL || 0, valueUSD: (balances.SOL || 0) * 145.80, iconUrl: 'https://cryptologos.cc/logos/solana-sol-logo.png', change: 4.12 },
+      { symbol: 'TRX', name: 'Tron', price: 0.12, balance: balances.TRX || 0, valueUSD: (balances.TRX || 0) * 0.12, iconUrl: 'https://cryptologos.cc/logos/tron-trx-logo.png', change: 1.05 },
+      { symbol: 'XMR', name: 'Monero', price: 167.00, balance: balances.XMR || 0, valueUSD: (balances.XMR || 0) * 167.00, iconUrl: 'https://cryptologos.cc/logos/monero-xmr-logo.png', change: 3.45 }
+    ];
+
+    return res.json({
+      success: true,
+      message: 'Wallet registered successfully',
+      wallet: { address: primaryId, allAddresses: addresses, method: importMethod || 'create' },
+      tokens: defaultTokens
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to register wallet chains' });
+  }
 });
 
 // ── 9. GET /api/wallet/balance — Wallet token balances ──
-app.get('/api/wallet/balance', (req, res) => {
-  const balances = {
-    BTC: 0,
-    ETH: 0,
-    BNB: 0,
-    SOL: 0,
-    USDT: 0,
-    XMR: 0,
-    DOGE: 0,
-    APT: 0
-  };
+app.get('/api/wallet/balance', checkAuth, async (req, res) => {
+  const addresses = walletStore.get(req.userId) || { eth: req.userId };
+  const balances = await fetchRealBalances(addresses);
+  
+  const totalValueUSD = 
+    (balances.BTC || 0) * 64210.50 +
+    (balances.ETH || 0) * 3485.20 +
+    (balances.BNB || 0) * 575.30 +
+    (balances.SOL || 0) * 145.80 +
+    (balances.TRX || 0) * 0.12 +
+    (balances.XMR || 0) * 167.00;
 
   return res.json({
     success: true,
     data: {
       balances,
-      totalValueUSD: 0
+      totalValueUSD
     }
   });
 });
 
 // ── 10. GET /api/wallet/assets — Full asset details ──
-app.get('/api/wallet/assets', (req, res) => {
+app.get('/api/wallet/assets', checkAuth, async (req, res) => {
+  const addresses = walletStore.get(req.userId) || { eth: req.userId };
+  const balances = await fetchRealBalances(addresses);
+  
   const assets = [
-    { symbol: 'BTC', name: 'Bitcoin', balance: 0, price: 64210.50, valueUSD: 0, change24h: 1.25, icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png' },
-    { symbol: 'ETH', name: 'Ethereum', balance: 0, price: 3485.20, valueUSD: 0, change24h: -0.52, icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png' },
-    { symbol: 'BNB', name: 'BNB', balance: 0, price: 575.30, valueUSD: 0, change24h: 0.85, icon: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png' },
-    { symbol: 'SOL', name: 'Solana', balance: 0, price: 145.80, valueUSD: 0, change24h: 4.12, icon: 'https://cryptologos.cc/logos/solana-sol-logo.png' },
-    { symbol: 'USDT', name: 'Tether', balance: 0, price: 1.00, valueUSD: 0, change24h: 0.01, icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png' },
-    { symbol: 'XMR', name: 'Monero', balance: 0, price: 167.00, valueUSD: 0, change24h: 3.45, icon: 'https://cryptologos.cc/logos/monero-xmr-logo.png' },
-    { symbol: 'DOGE', name: 'Dogecoin', balance: 0, price: 0.1542, valueUSD: 0, change24h: 5.23, icon: 'https://cryptologos.cc/logos/dogecoin-doge-logo.png' },
-    { symbol: 'APT', name: 'Aptos', balance: 0, price: 8.42, valueUSD: 0, change24h: 2.41, icon: 'https://cryptologos.cc/logos/aptos-apt-logo.png' }
+    { symbol: 'BTC', name: 'Bitcoin', balance: balances.BTC || 0, price: 64210.50, valueUSD: (balances.BTC || 0)*64210.50, change24h: 1.25, icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png' },
+    { symbol: 'ETH', name: 'Ethereum', balance: balances.ETH || 0, price: 3485.20, valueUSD: (balances.ETH || 0)*3485.20, change24h: -0.52, icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png' },
+    { symbol: 'BNB', name: 'BNB', balance: balances.BNB || 0, price: 575.30, valueUSD: (balances.BNB || 0)*575.30, change24h: 0.85, icon: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png' },
+    { symbol: 'SOL', name: 'Solana', balance: balances.SOL || 0, price: 145.80, valueUSD: (balances.SOL || 0)*145.80, change24h: 4.12, icon: 'https://cryptologos.cc/logos/solana-sol-logo.png' },
+    { symbol: 'TRX', name: 'Tron', balance: balances.TRX || 0, price: 0.12, valueUSD: (balances.TRX || 0)*0.12, change24h: 1.05, icon: 'https://cryptologos.cc/logos/tron-trx-logo.png' },
+    { symbol: 'XMR', name: 'Monero', balance: balances.XMR || 0, price: 167.00, valueUSD: (balances.XMR || 0)*167.00, change24h: 3.45, icon: 'https://cryptologos.cc/logos/monero-xmr-logo.png' }
   ];
+
+  const totalValueUSD = assets.reduce((sum, a) => sum + a.valueUSD, 0);
 
   return res.json({
     success: true,
     data: {
       assets,
-      totalValueUSD: 0
+      totalValueUSD
     }
   });
 });

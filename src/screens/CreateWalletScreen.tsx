@@ -6,16 +6,6 @@ import * as Clipboard from 'expo-clipboard';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import Svg, { Path } from 'react-native-svg';
-import { Ionicons } from '@expo/vector-icons';
-
-const GoogleDriveIcon = ({ size = 20 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 87.3 78">
-    <Path d="M60.6 22.8l26.7 46.2H34L60.6 22.8z" fill="#FFC107"/>
-    <Path d="M26.7 77.8L0 31.5h53.3l-26.6 46.3z" fill="#00A769"/>
-    <Path d="M60.6 22.8L34 69H7.3l26.7-46.2h26.6z" fill="#0066DA"/>
-  </Svg>
-);
 
 export default function CreateWalletScreen({ navigation }: any) {
   const [mnemonic, setMnemonic] = useState('');
@@ -127,7 +117,6 @@ export default function CreateWalletScreen({ navigation }: any) {
           style={[styles.copyBtn, CloudVoidTheme.shadows.neonViolet]} 
           onPress={handleCopy}
         >
-          <Ionicons name="copy-outline" size={18} color={CloudVoidTheme.colors.accent} />
           <Text style={styles.copyBtnText}>
             {clipboardTimer > 0 ? `Wiping Cache (${clipboardTimer}s)` : 'Copy Seed Phrase'}
           </Text>
@@ -162,15 +151,13 @@ export default function CreateWalletScreen({ navigation }: any) {
       <View style={styles.actionButtons}>
         <TouchableOpacity style={styles.secondaryBtn} onPress={handleCloudSave}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <GoogleDriveIcon size={18} />
-            <Text style={styles.secondaryBtnText}>Save to Google Drive</Text>
+            <Text style={styles.secondaryBtnText}>Google</Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.secondaryBtn} onPress={handleDownloadTxt}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="download-outline" size={18} color={CloudVoidTheme.colors.textPrimary} />
-            <Text style={styles.secondaryBtnText}>Download Backup File</Text>
+            <Text style={styles.secondaryBtnText}>Save to File</Text>
           </View>
         </TouchableOpacity>
 

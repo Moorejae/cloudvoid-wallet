@@ -33,6 +33,7 @@ export default function DashboardScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   
   const balances = useWalletStore((state) => state.balances);
+  const userId = useWalletStore((state) => state.userId);
   const selectedCurrency = useWalletStore((state) => state.selectedCurrency);
   const selectedLanguage = useWalletStore((state) => state.selectedLanguage);
   const wallets = useWalletStore((state) => state.wallets);
@@ -78,7 +79,7 @@ export default function DashboardScreen({ navigation }: any) {
     const loadRealData = async () => {
       try {
         const { fetchWalletAssets } = require('../services/web3Api');
-        const data = await fetchWalletAssets();
+        const data = await fetchWalletAssets(userId);
         if (data && data.assets) {
           const mappedTokens = data.assets.map((asset: any) => ({
             symbol: asset.symbol,
