@@ -37,6 +37,64 @@ const generateMockBurnerAddress = (symbol: string) => {
   }
 };
 
+const TOKEN_STATS: Record<string, {
+  networkName: string;
+  blockchainType: string;
+  marketCap: string;
+  volume24h: string;
+  explorerUrl: string;
+}> = {
+  BTC: {
+    networkName: 'Bitcoin Mainnet',
+    blockchainType: 'UTXO / Proof of Work',
+    marketCap: '$1.25T',
+    volume24h: '$28.4B',
+    explorerUrl: 'https://blockstream.info'
+  },
+  ETH: {
+    networkName: 'Ethereum Mainnet',
+    blockchainType: 'EVM / Proof of Stake',
+    marketCap: '$380B',
+    volume24h: '$15.2B',
+    explorerUrl: 'https://etherscan.io'
+  },
+  BNB: {
+    networkName: 'BNB Smart Chain',
+    blockchainType: 'EVM / Proof of Staked Authority',
+    marketCap: '$88B',
+    volume24h: '$1.1B',
+    explorerUrl: 'https://bscscan.com'
+  },
+  XMR: {
+    networkName: 'Monero Mainnet',
+    blockchainType: 'CryptoNote / RingCT',
+    marketCap: '$2.9B',
+    volume24h: '$84M',
+    explorerUrl: 'https://xmrchain.net'
+  },
+  USDT: {
+    networkName: 'Tether USD',
+    blockchainType: 'Stablecoin / Native Multi-chain',
+    marketCap: '$112B',
+    volume24h: '$52.7B',
+    explorerUrl: 'https://explorer.aptoslabs.com'
+  },
+  SOL: {
+    networkName: 'Solana Mainnet',
+    blockchainType: 'Proof of History / PoS',
+    marketCap: '$64B',
+    volume24h: '$3.5B',
+    explorerUrl: 'https://solscan.io'
+  },
+  TRX: {
+    networkName: 'TRON Mainnet',
+    blockchainType: 'TVM / Delegated Proof of Stake',
+    marketCap: '$11B',
+    volume24h: '$950M',
+    explorerUrl: 'https://tronscan.org'
+  }
+};
+
 export default function TokenDetailScreen({ route, navigation }: any) {
   const token = route.params?.token || { symbol: 'BTC', name: 'Bitcoin', price: 64230.00, change: 2.4, icon: '🧡', iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', color: '#f59e0b' };
   const balances = useWalletStore((state) => state.balances);
@@ -62,6 +120,14 @@ export default function TokenDetailScreen({ route, navigation }: any) {
   const primaryAddress = primaryWallet ? primaryWallet.address : '0x1a2b...3c4d';
   const mnemonic = useWalletStore((state) => state.mnemonic);
   const derivedAddress = getAddressForToken(mnemonic, token.symbol, primaryAddress);
+
+  const stats = TOKEN_STATS[token.symbol.toUpperCase()] || {
+    networkName: token.name + ' Network',
+    blockchainType: 'Layer 1 / Cryptographic',
+    marketCap: '$' + (token.price * 10000000).toLocaleString('en-US', { maximumFractionDigits: 0 }),
+    volume24h: '$' + (token.price * 500000).toLocaleString('en-US', { maximumFractionDigits: 0 }),
+    explorerUrl: 'https://explorer.aptoslabs.com'
+  };
 
   const addWallet = useWalletStore((state) => state.addWallet);
 
@@ -253,23 +319,27 @@ export default function TokenDetailScreen({ route, navigation }: any) {
           {statsExpanded && (
             <View style={styles.statsBody}>
               <View style={styles.statsRow}>
+                <Text style={styles.statsLabel}>Network Name</Text>
+                <Text style={styles.statsValue}>{stats.networkName}</Text>
+              </View>
+              <View style={styles.statsRow}>
                 <Text style={styles.statsLabel}>Market Capitalization</Text>
-                <Text style={styles.statsValue}>$1.2T</Text>
+                <Text style={styles.statsValue}>{stats.marketCap}</Text>
               </View>
               <View style={styles.statsRow}>
                 <Text style={styles.statsLabel}>24 Hour Transaction Volume</Text>
-                <Text style={styles.statsValue}>$32B</Text>
+                <Text style={styles.statsValue}>{stats.volume24h}</Text>
               </View>
               <View style={styles.statsRow}>
                 <Text style={styles.statsLabel}>Blockchain Type</Text>
-                <Text style={styles.statsValue}>EVM / Native</Text>
+                <Text style={styles.statsValue}>{stats.blockchainType}</Text>
               </View>
               
               <View style={styles.divider} />
               
               <TouchableOpacity 
                 style={styles.linkRow}
-                onPress={() => Linking.openURL('https://explorer.aptoslabs.com')}
+                onPress={() => Linking.openURL(stats.explorerUrl)}
               >
                 <Text style={styles.statsLabel}>Explorer Link</Text>
                 <View style={styles.linkGroup}>

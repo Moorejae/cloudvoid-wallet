@@ -22,6 +22,7 @@
     "expo": "~56.0.12",
     "expo-auth-session": "^56.0.14",
     "expo-blur": "~56.0.3",
+    "expo-camera": "^57.0.3",
     "expo-clipboard": "^56.0.4",
     "expo-document-picker": "^57.0.0",
     "expo-file-system": "^57.0.0",

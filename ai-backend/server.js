@@ -426,7 +426,7 @@ async function refreshPriceCache() {
 
   // 2. Fetch minor/memecoins from CoinGecko Free Tier (Cached to avoid rate limits)
   try {
-    const ids = 'pepe,wif,bonk,floki,aptos';
+    const ids = 'pepe,wif,bonk,floki,aptos,monero,solana,tron,bitcoin,ethereum,binancecoin,tether';
     const resp = await axios.get(`https://api.coingecko.com/api/v3/simple/price`, {
       params: { ids, vs_currencies: 'usd', include_24hr_change: 'true' },
       timeout: 5000
@@ -438,6 +438,13 @@ async function refreshPriceCache() {
     if (geckoData.bonk) priceCache['BONK'] = { usd: geckoData.bonk.usd, usd_24h_change: geckoData.bonk.usd_24h_change };
     if (geckoData.floki) priceCache['FLOKI'] = { usd: geckoData.floki.usd, usd_24h_change: geckoData.floki.usd_24h_change };
     if (geckoData.aptos) priceCache['APT'] = { usd: geckoData.aptos.usd, usd_24h_change: geckoData.aptos.usd_24h_change };
+    if (geckoData.monero) priceCache['XMR'] = { usd: geckoData.monero.usd, usd_24h_change: geckoData.monero.usd_24h_change };
+    if (geckoData.solana) priceCache['SOL'] = { usd: geckoData.solana.usd, usd_24h_change: geckoData.solana.usd_24h_change };
+    if (geckoData.tron) priceCache['TRX'] = { usd: geckoData.tron.usd, usd_24h_change: geckoData.tron.usd_24h_change };
+    if (geckoData.bitcoin) priceCache['BTC'] = { usd: geckoData.bitcoin.usd, usd_24h_change: geckoData.bitcoin.usd_24h_change };
+    if (geckoData.ethereum) priceCache['ETH'] = { usd: geckoData.ethereum.usd, usd_24h_change: geckoData.ethereum.usd_24h_change };
+    if (geckoData.binancecoin) priceCache['BNB'] = { usd: geckoData.binancecoin.usd, usd_24h_change: geckoData.binancecoin.usd_24h_change };
+    if (geckoData.tether) priceCache['USDT'] = { usd: geckoData.tether.usd, usd_24h_change: geckoData.tether.usd_24h_change };
     
     console.log("[Prices Poller] CoinGecko fetch completed successfully.");
   } catch (err) {

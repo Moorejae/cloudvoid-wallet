@@ -1,24 +1,45 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { getAddressForToken } from '../utils/walletHelper';
+import { Camera, CameraView } from 'expo-camera';
+import * as Haptics from 'expo-haptics';
 
 export default function QRModalScreen({ route, navigation }: any) {
   const token = route.params?.token || { symbol: 'USDT', name: 'Aptos USDT', icon: '💚' };
   const initialMode = route.params?.mode || 'qr';
   
   const [mode, setMode] = useState<'qr' | 'scan'>(initialMode);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [scanned, setScanned] = useState(false);
+
   const mnemonic = useWalletStore((state) => state.mnemonic);
   const userId = useWalletStore((state) => state.userId) || '0x2dff76d3614301dd6bc1600b3445d9ed2bbd6c812b0a2a96c5c5fadeabc06ace';
   const address = getAddressForToken(mnemonic, token.symbol, userId);
 
+  useEffect(() => {
+    if (mode === 'scan') {
+      (async () => {
+        const { status } = await Camera.requestCameraPermissionsAsync();
+        setHasPermission(status === 'granted');
+      })();
+    }
+  }, [mode]);
+
   const handleCopy = async () => {
     await Clipboard.setStringAsync(address);
     Alert.alert('Copied', 'Address copied to clipboard!');
+  };
+
+  const handleBarCodeScanned = ({ data }: any) => {
+    setScanned(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert('Scan Success', `Scanned Address: ${data}`);
+    navigation.replace('Send', { token, address: data });
   };
 
   const handleMockScanSuccess = () => {
@@ -83,14 +104,19 @@ export default function QRModalScreen({ route, navigation }: any) {
         ) : (
           /* SCAN QR CODE MODE */
           <View style={styles.scanWrapper}>
-            <View style={styles.scannerFrame}>
-              <View style={styles.scannerBox}>
-                <View style={styles.scannerTarget} />
-                <Text style={styles.scannerHelp}>Center the QR code within the frame</Text>
+            {Platform.OS !== 'web' && hasPermission ? (
+              <CameraView
+                style={StyleSheet.absoluteFillObject}
+                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+              />
+            ) : (
+              <View style={styles.scannerFrame}>
+                <TouchableOpacity onPress={handleMockScanSuccess} style={styles.scannerBox}>
+                  <View style={styles.scannerTarget} />
+                  <Text style={styles.scannerHelp}>Center the QR code within the frame (Tap to Mock)</Text>
+                </TouchableOpacity>
               </View>
-            </View>
-
-
+            )}
           </View>
         )}
       </View>

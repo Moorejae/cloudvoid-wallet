@@ -1,17 +1,40 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useNavigation } from '@react-navigation/native';
 import { useWalletConnectStore } from '../stores/walletConnectStore';
 import * as Haptics from 'expo-haptics';
+import { Camera, CameraView } from 'expo-camera';
 
 export default function WalletConnectScannerScreen() {
   const navigation = useNavigation<any>();
   const [uri, setUri] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [scanned, setScanned] = useState(false);
   
   const pair = useWalletConnectStore(state => state.pair);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+    })();
+  }, []);
+
+  const handleBarCodeScanned = ({ data }: any) => {
+    setScanned(true);
+    setUri(data);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert('QR Scanned', 'WalletConnect URI successfully scanned. Click Connect to link.');
+  };
+
+  const handleMockScanSuccess = () => {
+    const mockWcUri = 'wc:mock_session_' + Math.random().toString(36).substring(7);
+    setUri(mockWcUri);
+    Alert.alert('Mock Scan Success', 'Mocked WalletConnect QR Code.');
+  };
 
   const handleConnect = async () => {
     if (!uri.startsWith('wc:')) {
@@ -53,11 +76,20 @@ export default function WalletConnectScannerScreen() {
       </View>
 
       <View style={styles.content}>
-        <View style={styles.mockScannerArea}>
-          <Ionicons name="qr-code-outline" size={80} color={CloudVoidTheme.colors.primary} />
-          <Text style={styles.scannerText}>
-            (Camera disabled in simulator)
-          </Text>
+        <View style={styles.scannerWrapper}>
+          {Platform.OS !== 'web' && hasPermission ? (
+            <CameraView
+              style={StyleSheet.absoluteFillObject}
+              onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+            />
+          ) : (
+            <TouchableOpacity onPress={handleMockScanSuccess} style={styles.mockScannerArea}>
+              <Ionicons name="qr-code-outline" size={80} color={CloudVoidTheme.colors.primary} />
+              <Text style={styles.scannerText}>
+                (Camera disabled on web - Tap to Mock)
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <Text style={styles.manualLabel}>Or paste WalletConnect URI:</Text>
@@ -119,12 +151,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   mockScannerArea: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scannerWrapper: {
     width: 250,
     height: 250,
     borderWidth: 2,
     borderColor: 'rgba(59, 153, 252, 0.3)',
     borderRadius: 24,
     borderStyle: 'dashed',
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 40,
