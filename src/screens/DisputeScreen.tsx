@@ -21,22 +21,9 @@ export default function DisputeScreen({ route, navigation }: any) {
   const isJurorEligible = trustPoints > 110;
 
   useEffect(() => {
-    // Poll for jury votes periodically
-    const interval = setInterval(() => {
-      // Mock random vote increments by other jurors
-      if (votesBuyer < 3 && votesSeller < 3) {
-        if (Math.random() > 0.6) {
-          if (Math.random() > 0.5) {
-            setVotesBuyer((v) => v + 1);
-          } else {
-            setVotesSeller((v) => v + 1);
-          }
-        }
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [votesBuyer, votesSeller]);
+    // In a real environment, this would listen to a WebSocket for juror vote events.
+    // Fake votes have been removed.
+  }, []);
 
   // Check if resolution has been met (3 of 5 majority)
   useEffect(() => {

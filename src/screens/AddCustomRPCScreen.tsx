@@ -26,7 +26,7 @@ export default function AddCustomRPCScreen({ navigation }: any) {
       chainId: chainId,
       symbol: symbol,
       explorerUrl: explorerUrl || undefined,
-      latency: Math.floor(Math.random() * 80) + 15, // Mock initial latency
+      latency: 0,
     };
 
     addCustomRPC(newRPC);

@@ -8,19 +8,19 @@ export default function UserAccountDashboardScreen({ navigation }: any) {
   const trustPoints = useWalletStore((state) => state.trustPoints);
 
   const [showSettings, setShowSettings] = useState(false);
-  const [alias, setAlias] = useState('CryptoSavvyNG');
+  const [alias, setAlias] = useState('');
   const [tempAlias, setTempAlias] = useState(alias);
   const [avatarSource, setAvatarSource] = useState<any>(null);
   const [showImagePicker, setShowImagePicker] = useState(false);
 
   // States for editable payment methods
-  const [opayNumber, setOpayNumber] = useState('**** 1234');
-  const [opayName, setOpayName] = useState('Victor Moore');
-  const [opayBank, setOpayBank] = useState('OPay');
+  const [opayNumber, setOpayNumber] = useState('');
+  const [opayName, setOpayName] = useState('');
+  const [opayBank, setOpayBank] = useState('');
 
-  const [accessNumber, setAccessNumber] = useState('**** 5678');
-  const [accessName, setAccessName] = useState('Victor Moore');
-  const [accessBank, setAccessBank] = useState('Access Bank');
+  const [accessNumber, setAccessNumber] = useState('');
+  const [accessName, setAccessName] = useState('');
+  const [accessBank, setAccessBank] = useState('');
 
   const [editingMethod, setEditingMethod] = useState<'opay' | 'access' | null>(null);
   const [tempNumber, setTempNumber] = useState('');

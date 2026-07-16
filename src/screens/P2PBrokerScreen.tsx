@@ -50,14 +50,14 @@ export default function P2PBrokerScreen({ navigation }: any) {
   
   const [showAptosModal, setShowAptosModal] = useState(false);
   const [aptosStep, setAptosStep] = useState<'linking' | 'locking' | 'locked' | 'insufficient'>('linking');
-  const aptosBalance = 0; // Mock 0 to show insufficient by default, or change to 100 to show lock. Let's make it 100 for success, wait I will make it 0 and then we can change it to test if we want, actually let's set a mock balance of 500 so it locks it. Wait, the user said "if they don't have it... if they have it...". Let's use 500.
-  const mockAptosBalance = 500;
+  const balances = useWalletStore((state) => state.balances);
+  const aptosBalance = balances['USDT'] || 0;
 
   const handleSellAction = () => {
     setShowAptosModal(true);
     setAptosStep('linking');
     setTimeout(() => {
-      if (mockAptosBalance > 0) {
+      if (aptosBalance > 0) {
         setAptosStep('locking');
         setTimeout(() => {
           setAptosStep('locked');
@@ -355,7 +355,7 @@ export default function P2PBrokerScreen({ navigation }: any) {
             {aptosStep === 'locking' && (
               <>
                 <Text style={styles.aiModalTitle}>Wallet Linked</Text>
-                <Text style={styles.aiModalText}>Found {mockAptosBalance} USDT. Locking down wallet and moving funds to secure P2P escrow...</Text>
+                <Text style={styles.aiModalText}>Found {aptosBalance} USDT. Locking down wallet and moving funds to secure P2P escrow...</Text>
                 <ActivityIndicator size="large" color="#10b981" style={{marginTop: 20}} />
               </>
             )}

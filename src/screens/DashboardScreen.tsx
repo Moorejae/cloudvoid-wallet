@@ -115,8 +115,7 @@ export default function DashboardScreen({ navigation }: any) {
 
   const storeTotal = tokens.reduce((sum, token) => sum + (balances[token.symbol] || 0) * token.price, 0);
   
-  // For visual mockup accuracy, show demo value if actual balance is 0
-  const displayValue = (storeTotal > 0 ? storeTotal : 30121.75) * rate;
+  const displayValue = storeTotal * rate;
   
   const displayBalance = hideBalance 
     ? '••••••' 

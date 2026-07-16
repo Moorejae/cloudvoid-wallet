@@ -49,10 +49,8 @@ export default function OrderActiveScreen({ route, navigation }: any) {
       }
     };
 
-    // Initial system message mock
-    setMessages([
-      { sender: 'system', text: `Trade matched. Order ID: ${orderId}. Escrow pending.`, timestamp: new Date().toLocaleTimeString() }
-    ]);
+    // Await real connection for history
+    setMessages([]);
 
     return () => ws.close();
   }, [orderId]);

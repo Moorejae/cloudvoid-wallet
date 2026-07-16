@@ -262,17 +262,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     const wallet = wallets.find(w => w.id === id);
     if (!wallet) return;
 
-    let newBalances = {};
-    if (id === '1') {
-      newBalances = { BTC: 0.452, ETH: 2.15, BNB: 4.8, CELO: 150.0, USDT: 500.0, SOL: 12.5, TRX: 850.0, TON: 35.0, XMR: 1.2, MATIC: 450.0 };
-    } else if (id === '2') {
-      newBalances = { BTC: 0.12, ETH: 0.85, BNB: 1.2, CELO: 45.0, USDT: 120.0, SOL: 3.4, TRX: 210.0, TON: 8.0, XMR: 0.2, MATIC: 95.0 };
-    } else if (id === '3') {
-      newBalances = { BTC: 0.05, ETH: 0.32, BNB: 0.5, CELO: 10.0, USDT: 50.0, SOL: 1.2, TRX: 80.0, TON: 2.0, XMR: 0.05, MATIC: 30.0 };
-    } else {
-      newBalances = { BTC: 0.005, ETH: 0.02, BNB: 0.1, CELO: 2.0, USDT: 10.0, SOL: 0.2, TRX: 50.0, TON: 0.5, XMR: 0.01, MATIC: 10.0 };
-    }
-
+    // In a real app we would load balances from the actual wallet address.
+    // Since we are removing mock data, we just initialize to 0.
+    const newBalances = { BTC: 0, ETH: 0, BNB: 0, CELO: 0, USDT: 0, SOL: 0, TRX: 0, TON: 0, XMR: 0, MATIC: 0 };
     set({ activeWalletId: id, balances: newBalances });
   }
 }));

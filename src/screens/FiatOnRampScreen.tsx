@@ -28,7 +28,7 @@ export default function FiatOnRampScreen({ route, navigation }: any) {
   const token = route?.params?.token;
   const wallets = useWalletStore((state) => state.wallets);
   const activeWallet = wallets[0];
-  const walletAddress = activeWallet?.address || '0xMockWalletAddress';
+  const walletAddress = activeWallet?.address || '';
   const symbol = token?.symbol || 'USDT';
 
   const [links, setLinks] = useState<Record<string, string>>({});

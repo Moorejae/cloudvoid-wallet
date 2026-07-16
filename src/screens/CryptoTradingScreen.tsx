@@ -41,14 +41,14 @@ export default function CryptoTradingScreen() {
   const handleGetQuote = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
     setQuoting(true);
-    const result = await getSwapQuote(fromToken, toToken, parseFloat(amount), '0xMockWalletAddress');
+    const result = await getSwapQuote(fromToken, toToken, parseFloat(amount), '0x'); // Require actual connection
     setQuote(result);
     setQuoting(false);
   };
 
   const handleExecuteSwap = () => {
     if (!quote) return;
-    navigation.navigate('SwapConfirmation', { quote, walletAddress: '0xMockWalletAddress' });
+    navigation.navigate('SwapConfirmation', { quote, walletAddress: '0x' });
   };
 
   return (

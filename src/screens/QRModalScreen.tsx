@@ -86,13 +86,7 @@ export default function QRModalScreen({ route, navigation }: any) {
               </View>
             </View>
 
-            {/* Mock Trigger Button */}
-            <TouchableOpacity 
-              style={styles.mockScanBtn}
-              onPress={handleMockScanSuccess}
-            >
-              <Text style={styles.mockScanBtnText}>Simulate QR Scan Success</Text>
-            </TouchableOpacity>
+
           </View>
         )}
       </View>

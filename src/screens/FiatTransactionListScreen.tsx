@@ -18,52 +18,7 @@ interface Transaction {
   iconBg: string;
 }
 
-const TRANSACTIONS: Transaction[] = [
-  {
-    id: '1',
-    type: 'Deposit',
-    title: 'Deposit',
-    date: 'Jul 28, 2024',
-    amount: '$500.00',
-    isPositive: true,
-    iconName: 'arrow-up',
-    iconColor: '#22c55e',
-    iconBg: '#dcfce7',
-  },
-  {
-    id: '2',
-    type: 'Withdraw',
-    title: 'Withdraw',
-    date: 'Jul 25, 2024',
-    amount: '-$150.00',
-    isPositive: false,
-    iconName: 'arrow-down',
-    iconColor: '#ef4444',
-    iconBg: '#fee2e2',
-  },
-  {
-    id: '3',
-    type: 'Card Purchase',
-    title: 'Card Purchase (Amazon)',
-    date: 'Jul 24, 2024',
-    amount: '-$85.00',
-    isPositive: false,
-    iconName: 'bag-handle-outline',
-    iconColor: '#3b82f6',
-    iconBg: '#dbeafe',
-  },
-  {
-    id: '4',
-    type: 'Convert',
-    title: 'Fiat to Dollar (Naira)',
-    date: 'Jul 21, 2024',
-    amount: '+$320.00',
-    isPositive: true,
-    iconName: 'swap-horizontal',
-    iconColor: '#8b5cf6',
-    iconBg: '#ede9fe',
-  }
-];
+const TRANSACTIONS: Transaction[] = [];
 
 export default function FiatTransactionListScreen({ navigation }: any) {
   const [filterVisible, setFilterVisible] = useState(false);

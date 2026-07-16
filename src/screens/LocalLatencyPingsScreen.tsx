@@ -52,7 +52,7 @@ export default function LocalLatencyPingsScreen({ navigation }: any) {
       setPings((prev) =>
         prev.map((item) => ({
           ...item,
-          latency: Math.floor(Math.random() * 120) + 12, // Randomize mock latency
+          latency: 0,
         }))
       );
       setLoading(false);
