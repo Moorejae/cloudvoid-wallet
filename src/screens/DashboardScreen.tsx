@@ -168,21 +168,7 @@ export default function DashboardScreen({ navigation }: any) {
               <Path d="M18 16V20M16 18H20" stroke={CloudVoidTheme.colors.accentGlow} strokeWidth="1.5" strokeLinecap="round" />
             </Svg>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Web3Flow')}>
-            <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              {/* Central globe outline */}
-              <Circle cx="12" cy="12" r="5" stroke={CloudVoidTheme.colors.accentGlow} strokeWidth="1.5"/>
-              <Path d="M12 7C14.2091 7 16 9.23858 16 12C16 14.7614 14.2091 17 12 17C9.79086 17 8 14.7614 8 12C8 9.23858 9.79086 7 12 7Z" stroke={CloudVoidTheme.colors.accentGlow} strokeWidth="1.5" />
-              <Path d="M7 12H17" stroke={CloudVoidTheme.colors.accentGlow} strokeWidth="1.5" />
-              {/* Dotted network circle */}
-              <Circle cx="12" cy="12" r="9" stroke={CloudVoidTheme.colors.accentGlow} strokeWidth="1" strokeDasharray="2 4" />
-              {/* Nodes */}
-              <Circle cx="12" cy="3" r="2" fill={CloudVoidTheme.colors.bgInternal} stroke={CloudVoidTheme.colors.accentGlow} strokeWidth="1.5" />
-              <Circle cx="3" cy="12" r="2" fill={CloudVoidTheme.colors.bgInternal} stroke={CloudVoidTheme.colors.accentGlow} strokeWidth="1.5" />
-              <Circle cx="21" cy="12" r="2" fill={CloudVoidTheme.colors.bgInternal} stroke={CloudVoidTheme.colors.accentGlow} strokeWidth="1.5" />
-              <Circle cx="12" cy="21" r="2" fill={CloudVoidTheme.colors.bgInternal} stroke={CloudVoidTheme.colors.accentGlow} strokeWidth="1.5" />
-            </Svg>
-          </TouchableOpacity>
+
         </View>
       </View>
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,13 +59,13 @@ export default function QRModalScreen({ route, navigation }: any) {
           /* DISPLAY QR CODE MODE */
           <View style={styles.qrWrapper}>
             <View style={styles.qrCard}>
-              <View style={styles.qrPlaceholder}>
-                <View style={styles.qrGrid}>
-                  <View style={[styles.qrCorner, { top: 0, left: 0 }]} />
-                  <View style={[styles.qrCorner, { top: 0, right: 0 }]} />
-                  <View style={[styles.qrCorner, { bottom: 0, left: 0 }]} />
-                  <View style={styles.qrCore} />
-                </View>
+              <View style={{ padding: 16, backgroundColor: '#ffffff', borderRadius: 12, marginBottom: 16 }}>
+                <QRCode
+                  value={userId}
+                  size={180}
+                  color="#000000"
+                  backgroundColor="#ffffff"
+                />
               </View>
               <Text style={styles.tokenMeta}>{token.icon} {token.symbol}</Text>
             </View>

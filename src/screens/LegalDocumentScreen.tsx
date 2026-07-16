@@ -7,7 +7,7 @@ export default function LegalDocumentScreen({ navigation, route }: any) {
   const { documentType } = route.params || { documentType: 'terms' };
   
   const isTerms = documentType === 'terms';
-  const title = isTerms ? "P2P Terms of Service" : "Merchant Code of Conduct";
+  const title = isTerms ? "Wallet Terms of Service" : "Wallet Code of Conduct";
 
   return (
     <View style={styles.container}>
@@ -25,65 +25,39 @@ export default function LegalDocumentScreen({ navigation, route }: any) {
           <>
             <Text style={styles.sectionTitle}>1. Acceptance of Terms</Text>
             <Text style={styles.paragraph}>
-              By applying for and using the CloudVoid Peer-to-Peer (P2P) Merchant platform, you ("Merchant", "You") agree to be bound by these Terms of Service. These terms constitute a legally binding agreement between you and CloudVoid ("Platform", "We", "Us").
+              By using the CloudVoid Wallet, you ("User", "You") agree to be bound by these Terms of Service. These terms constitute a legally binding agreement between you and CloudVoid ("Platform", "We", "Us").
             </Text>
 
             <Text style={styles.sectionTitle}>2. Role of CloudVoid</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Matchmaking & Escrow Only:</Text> CloudVoid acts strictly as an intermediary technology platform, providing matchmaking and cryptocurrency escrow services.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Not a Counterparty:</Text> CloudVoid is not a buyer, seller, or counterparty to any fiat-to-crypto transaction. All fiat transactions occur directly between the buyer and seller off-platform.</Text>
+            <Text style={styles.listItem}>• <Text style={styles.boldText}>Non-Custodial Wallet:</Text> CloudVoid is a decentralized, non-custodial wallet interface. We do not hold, control, or have access to your private keys, seed phrases, or funds.</Text>
+            <Text style={styles.listItem}>• <Text style={styles.boldText}>Self-Custody Responsibility:</Text> You are entirely responsible for securing your own seed phrase and private keys. Loss of these credentials means permanent loss of your funds.</Text>
 
             <Text style={styles.sectionTitle}>3. Limitation of Liability & Disclaimers</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>No Liability for Fiat Losses:</Text> CloudVoid is not responsible for any fiat currency losses, bank freezes, or chargebacks incurred as a result of P2P trading. Merchants assume all risks associated with counterparty payments.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>No Guarantees:</Text> CloudVoid does not guarantee the completion of any trade or the honesty of any user on the platform.</Text>
+            <Text style={styles.listItem}>• <Text style={styles.boldText}>No Liability for Losses:</Text> CloudVoid is not responsible for any financial losses, hacks, phishing attempts, or user errors resulting in the loss of crypto assets.</Text>
             <Text style={styles.listItem}>• <Text style={styles.boldText}>Technology Risks:</Text> CloudVoid is not liable for losses resulting from system failures, network congestion, or smart contract vulnerabilities outside of our direct control.</Text>
 
-            <Text style={styles.sectionTitle}>4. Indemnification</Text>
+            <Text style={styles.sectionTitle}>4. Taxes and Compliance</Text>
             <Text style={styles.paragraph}>
-              You agree to indemnify, defend, and hold harmless CloudVoid, its affiliates, directors, and employees from any and all claims, liabilities, damages, or legal costs arising out of your P2P trading activities, violations of these terms, or disputes with other users.
-            </Text>
-
-            <Text style={styles.sectionTitle}>5. Right to Terminate and Revoke</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>At-Will Termination:</Text> CloudVoid reserves the absolute right to terminate, suspend, or revoke your merchant status at any time, for any reason, without prior notice.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Platform Bans & Flagging:</Text> In the event of suspected fraud or misconduct, CloudVoid will freeze your account access, kick you off the platform, and permanently flag your credentials to prevent future verification.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>No Asset Confiscation:</Text> As a decentralized, non-custodial technology provider, CloudVoid does not hold, freeze, or confiscate any user assets (fiat or crypto). Disputes are purely resolved via the decentralized Jury System which controls the multisig release.</Text>
-
-            <Text style={styles.sectionTitle}>6. Taxes and Compliance</Text>
-            <Text style={styles.paragraph}>
-              Merchants are solely responsible for calculating, reporting, and paying any applicable taxes arising from their P2P trading activities. Merchants must comply with all local laws and regulations regarding cryptocurrency trading and money transmission in their respective jurisdictions.
+              Users are solely responsible for calculating, reporting, and paying any applicable taxes arising from their transactions. Users must comply with all local laws and regulations regarding cryptocurrency usage in their respective jurisdictions.
             </Text>
           </>
         ) : (
           <>
-            <Text style={styles.sectionTitle}>1. Operational Integrity & Requirements</Text>
+            <Text style={styles.sectionTitle}>1. Prohibited Activities</Text>
             <Text style={styles.paragraph}>
-              To maintain "Trusted Merchant" or verified status on the CloudVoid platform, merchants must adhere to the following strict operational requirements:
+              Engaging in any of the following activities through our interface is strictly prohibited:
             </Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Minimum Trade Volume:</Text> Must maintain a minimum of 200 successful P2P trades.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Completion Rate:</Text> Must maintain a 100% trade completion rate. Unjustified cancellations are strictly prohibited.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Release Time:</Text> Must maintain an average asset release time of under 5 minutes.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Honest Pricing:</Text> Must honor advertised prices, quantities, and minimum/maximum trade limits.</Text>
+            <Text style={styles.listItem}>• <Text style={styles.boldText}>Illegal Activities:</Text> Using the wallet to facilitate money laundering, terrorist financing, or any other illegal activities.</Text>
+            <Text style={styles.listItem}>• <Text style={styles.boldText}>Malicious Exploits:</Text> Attempting to reverse-engineer the wallet interface, inject malicious code, or exploit vulnerabilities.</Text>
+            
+            <Text style={styles.sectionTitle}>2. Platform Integrity</Text>
+            <Text style={styles.listItem}>• <Text style={styles.boldText}>No Asset Confiscation:</Text> CloudVoid does not hold or freeze user assets. We have no technical capability to freeze your on-chain assets or recover funds if you send them to the wrong address.</Text>
+            <Text style={styles.listItem}>• <Text style={styles.boldText}>Open Source Reliance:</Text> The platform utilizes open-source blockchain infrastructure. You acknowledge that blockchain transactions are irreversible.</Text>
 
-            <Text style={styles.sectionTitle}>2. Prohibited Activities</Text>
+            <Text style={styles.sectionTitle}>3. Changes to the Code of Conduct</Text>
             <Text style={styles.paragraph}>
-              Engaging in any of the following activities will result in immediate investigation and potential revocation of merchant status:
+              CloudVoid reserves the right to update this Code of Conduct at any time. Continued use of the wallet implies acceptance of the revised policies.
             </Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Off-Platform Communication:</Text> All trade-related communication must occur within the official CloudVoid P2P chat. Redirecting users to external channels (e.g., WhatsApp, Telegram) is strictly forbidden.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Third-Party Payments:</Text> Merchants must use payment accounts that match their verified platform identity. Accepting or sending payments via third-party accounts is a severe violation.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Market Manipulation:</Text> Attempting to manipulate market prices, coordinating trades to induce others, or posting deceptive advertisements.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Fraudulent Chargebacks:</Text> Attempting to profit from chargebacks, refunds, or falsified payment documentation.</Text>
-
-            <Text style={styles.sectionTitle}>3. Dispute Resolution & The Jury System</Text>
-            <Text style={styles.listItem}>• Merchants must fully cooperate during arbitration and provide requested evidence promptly.</Text>
-            <Text style={styles.listItem}>• Merchants are required to respect the verdicts delivered by the decentralized CloudVoid Jury System. Continued circumvention or repeated disputes will result in a permanent ban.</Text>
-
-            <Text style={styles.sectionTitle}>4. Sanctions & Consequences</Text>
-            <Text style={styles.paragraph}>
-              CloudVoid defines misconduct broadly to protect the ecosystem. Standard penalties for violating this Code of Conduct include:
-            </Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Immediate Revocation:</Text> Loss of "Pro Merchant" or "Trusted Merchant" status.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Account Bans & Flagging:</Text> Permanent bans from the CloudVoid platform and flagging of identity to prevent the creation of new accounts.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>No Asset Confiscation:</Text> CloudVoid does not hold or freeze merchant assets. The platform relies exclusively on the decentralized Jury System to resolve disputes and release funds held in multisig escrow.</Text>
-            <Text style={styles.listItem}>• <Text style={styles.boldText}>Legal Action:</Text> CloudVoid reserves the right to report serious misconduct or fraud to local law enforcement authorities.</Text>
           </>
         )}
         

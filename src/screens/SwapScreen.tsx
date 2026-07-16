@@ -4,7 +4,8 @@ import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import { Ionicons } from '@expo/vector-icons';
 import DoubleConfirmModal from '../components/DoubleConfirmModal';
-import { getSwapQuote, executeSwap, SwapQuote } from '../services/web3Api';
+import { getSwapQuote, SwapQuote } from '../services/web3Api';
+import * as WebBrowser from 'expo-web-browser';
 
 export default function SwapScreen({ navigation }: any) {
   const { balances, setBalances, addTransaction } = useWalletStore((state) => state);
@@ -47,42 +48,14 @@ export default function SwapScreen({ navigation }: any) {
   const handleConfirmSwap = async () => {
     if (!quote) return;
     setIsConfirmOpen(false);
-    setQuoting(true);
-
-    const result = await executeSwap(
-      fromToken,
-      toToken,
-      parsedFrom,
-      '0xMockWalletAddress',
-      quote.estimatedOutput
-    );
-
-    if (result && result.status === 'confirmed') {
-      // Update balances
-      const newBalances = {
-        [fromToken]: fromBalance - parsedFrom,
-        [toToken]: toBalance + result.outputAmount
-      };
-      setBalances(newBalances);
-
-      // Log transaction
-      addTransaction({
-        id: result.transactionHash,
-        type: 'Swap',
-        token: `${fromToken}➔${toToken}`,
-        amount: parsedFrom,
-        fiatAmount: parsedFrom * (quote.exchangeRate || 1.0),
-        status: 'Confirmed',
-        counterparty: '1inch Liquidity Router',
-        timestamp: 'Just now'
-      });
-
-      Alert.alert('Swap Executed', `Swapped ${parsedFrom} ${fromToken} for ${result.outputAmount.toFixed(4)} ${toToken} successfully.`);
-      navigation.popToTop();
-    } else {
-      Alert.alert('Swap Failed', 'The swap transaction failed to execute.');
+    
+    const dAppUrl = `https://app.uniswap.org/swap?exactField=input&exactAmount=${parsedFrom}`;
+    
+    try {
+      await WebBrowser.openBrowserAsync(dAppUrl);
+    } catch (err) {
+      Alert.alert('Error', 'Could not open the Swap dApp.');
     }
-    setQuoting(false);
   };
 
   const handleSwitch = () => {

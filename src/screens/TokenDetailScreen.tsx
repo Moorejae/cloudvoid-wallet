@@ -6,6 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import AIBrain from '../components/AIBrain';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
+import axios from 'axios';
+import { API_BASE_URL } from '../services/web3Api';
+import * as WebBrowser from 'expo-web-browser';
 
 const generateMockBurnerAddress = (symbol: string) => {
   const chars = '0123456789abcdef';
@@ -59,10 +62,11 @@ export default function TokenDetailScreen({ route, navigation }: any) {
 
   const addWallet = useWalletStore((state) => state.addWallet);
 
-  const handleGenerateBurner = () => {
+  const handleGenerateBurner = async () => {
     setBurnerState('generating');
-    setTimeout(() => {
-      const addr = generateMockBurnerAddress(token.symbol);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/wallet/generate-burner`, { symbol: token.symbol });
+      const addr = res.data.address;
       setGeneratedAddress(addr);
       setBurnerState('success');
       
@@ -73,7 +77,11 @@ export default function TokenDetailScreen({ route, navigation }: any) {
         address: addr,
         status: 'Active'
       });
-    }, 2000); // 2s simulated loading
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Failed to generate burner address on chain.');
+      setBurnerState('idle');
+    }
   };
 
   const copyToClipboard = async () => {
@@ -142,9 +150,17 @@ export default function TokenDetailScreen({ route, navigation }: any) {
         <View style={styles.titleContainer}>
           <Image source={{ uri: token.iconUrl }} style={styles.titleLogo} />
           <Text style={styles.topBarTitle}>{token.name}</Text>
+          {token.symbol === 'XMR' && (
+            <TouchableOpacity onPress={() => navigation.navigate('MoneroViewer')} style={{ marginLeft: 8 }}>
+              <Ionicons name="eye" size={22} color="#f59e0b" />
+            </TouchableOpacity>
+          )}
         </View>
         <View style={{ flexDirection: 'row', gap: 12 }}>
-          <TouchableOpacity onPress={() => navigation.navigate('FiatOnRamp', { token })} style={styles.buyBtnHeader}>
+          <TouchableOpacity 
+            onPress={() => WebBrowser.openBrowserAsync(`https://buy.moonpay.com?currencyCode=${token.symbol}&walletAddress=${primaryAddress}`)} 
+            style={styles.buyBtnHeader}
+          >
             <Ionicons name="card-outline" size={18} color={CloudVoidTheme.colors.success} />
             <Text style={styles.buyText}>Buy</Text>
           </TouchableOpacity>

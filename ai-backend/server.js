@@ -445,9 +445,9 @@ async function refreshPriceCache() {
   }
 }
 
-// Start polling every 5 minutes
+// Start polling every 2 hours
 refreshPriceCache();
-setInterval(refreshPriceCache, 5 * 60 * 1000);
+setInterval(refreshPriceCache, 2 * 60 * 60 * 1000);
 
 // ──────── Prices Endpoint ────────
 app.get('/api/prices', async (req, res) => {
@@ -493,6 +493,32 @@ app.post('/api/wallet/register', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to register wallet chains' });
+  }
+});
+
+// ── NEW: Generate Real Burner Address ──
+app.post('/api/wallet/generate-burner', async (req, res) => {
+  const { symbol } = req.body;
+  try {
+    const bip39 = require('bip39');
+    const mnemonic = bip39.generateMnemonic();
+    const addresses = await deriveAllAddresses(mnemonic);
+    
+    let addr = addresses.eth;
+    const sym = symbol?.toUpperCase();
+    if (sym === 'BTC') addr = addresses.btc;
+    if (sym === 'SOL') addr = addresses.sol;
+    if (sym === 'TRX') addr = addresses.trx;
+    if (sym === 'XMR') addr = addresses.xmr;
+    if (!addr) addr = addresses.eth; // Fallback to EVM
+
+    // We can also store this burner in memory if needed
+    walletStore.set(addr, addresses);
+
+    return res.json({ success: true, address: addr, mnemonic });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: 'Failed to generate burner address' });
   }
 });
 
