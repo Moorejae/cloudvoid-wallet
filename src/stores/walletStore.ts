@@ -96,16 +96,16 @@ interface WalletState {
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
-  userId: null,
-  email: null,
+  userId: '0xDefaultTestingUser',
+  email: 'developer@cloudvoid.online',
   trustPoints: 100,
   riskScore: 0,
   lockoutActive: false,
-  mnemonic: null,
+  mnemonic: 'test test test test test test test test test test test junk',
   isBiometricEnabled: false,
   isScreenshotBlocked: false,
   isVerified: true,
-  activeWalletId: null,
+  activeWalletId: '1',
   notificationsEnabled: true,
   activeTxFilter: 'All',
   activeTxDateFilter: null,
@@ -125,7 +125,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     XMR: 0,
     MATIC: 0,
   },
-  wallets: [],
+  wallets: [{ id: '1', name: 'Main Wallet', address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', status: 'Active' }],
   customRPCs: [],
   tokens: [
     { symbol: 'BTC', name: 'Bitcoin', price: 30121.75, change: 0.12, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', sparklineData: [40, 45, 42, 50, 48, 55, 60] },
