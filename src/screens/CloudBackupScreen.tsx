@@ -8,12 +8,12 @@ import { API_BASE_URL } from '../services/web3Api';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 // Ensure Google Sign-In is configured with the correct scopes and Client ID
-GoogleSignin.configure({
-  scopes: ['profile', 'email', 'https://www.googleapis.com/auth/drive.file'],
-  webClientId: '141857948281-547s5hcr7t0j3sbfepd23282fshd232a.apps.googleusercontent.com',
-  // TODO: Add iosClientId when you are ready to build for iOS
-  // iosClientId: 'YOUR_IOS_CLIENT_ID_HERE',
-});
+if (Platform.OS !== 'web') {
+  GoogleSignin.configure({
+    scopes: ['profile', 'email', 'https://www.googleapis.com/auth/drive.file'],
+    webClientId: '141857948281-547s5hcr7t0j3sbfepd23282fshd232a.apps.googleusercontent.com',
+  });
+}
 
 export default function CloudBackupScreen({ route, navigation }: any) {
   const mode = route.params?.mode || 'import';
@@ -29,6 +29,10 @@ export default function CloudBackupScreen({ route, navigation }: any) {
   const [driveFiles, setDriveFiles] = useState<any[]>([]);
 
   const handleGoogleSignIn = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Not Supported', 'Google Cloud backup is only supported on iOS and Android devices.');
+      return;
+    }
     setStep('processing');
     try {
       await GoogleSignin.hasPlayServices();
