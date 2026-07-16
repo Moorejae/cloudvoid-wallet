@@ -284,6 +284,20 @@ export default function SettingsScreen({ navigation }: any) {
                     <Text style={styles.actionSheetItemTitle}>Manage Wallets</Text>
                   </View>
                 </TouchableOpacity>
+
+                <View style={styles.actionSheetDivider} />
+
+                <TouchableOpacity style={styles.actionSheetItem} onPress={() => {
+                  closeSheet();
+                  setTimeout(() => {
+                    navigation.navigate('MoneroViewer');
+                  }, 50);
+                }}>
+                  <View style={styles.actionSheetItemLeft}>
+                    <Ionicons name="eye-outline" size={24} color={CloudVoidTheme.colors.textPrimary as any} style={{marginRight: 12}} />
+                    <Text style={styles.actionSheetItemTitle}>Monero Wallet Viewer</Text>
+                  </View>
+                </TouchableOpacity>
               </View>
 
               <TouchableOpacity style={styles.actionSheetCancel} onPress={closeSheet}>

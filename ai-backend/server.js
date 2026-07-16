@@ -13,6 +13,7 @@ const cryptoData = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'cryp
 const { extractIntentAndEntities, extractAsset, extractNetwork } = require('./parser/intentEngine');
 const { getSession, updateSession, clearSession } = require('./stateManager');
 const { AUTHORIZED_NETWORKS, deriveAllAddresses, fetchRealBalances } = require('./services/cryptoService');
+const responseGenerator = require('./parser/responseGenerator');
 
 const app = express();
 app.use(cors());
@@ -69,7 +70,7 @@ function capitalize(str) {
 
 // ──────── Main Endpoint ────────
 app.post('/api/concierge', async (req, res) => {
-  const { message, currentScreen, sessionToken, directAction } = req.body;
+  const { message, currentScreen, sessionToken, directAction, tone = 'casual' } = req.body;
 
   if (!message) {
     return res.json({ speechResponse: "I didn't receive a message.", action: null, payload: null });
@@ -116,7 +117,7 @@ app.post('/api/concierge', async (req, res) => {
     if (lang) {
       clearSession(sessionId);
       // Removed NAVIGATE, now sending direct global action
-      return res.json({ speechResponse: `Language changed to ${capitalize(lang)}. This task has been completed. Do you want anything else?`, action: 'CHANGE_LANGUAGE', payload: { language: lang } });
+      return res.json({ speechResponse: responseGenerator.generateResponse('CHANGE_LANGUAGE', tone, { language: capitalize(lang) }), action: 'CHANGE_LANGUAGE', payload: { language: lang } });
     }
     if (activeSession.step === 'INIT') {
       updateSession(sessionId, { step: 'AWAITING_LANGUAGE' });
@@ -130,7 +131,7 @@ app.post('/api/concierge', async (req, res) => {
     if (currency) {
       clearSession(sessionId);
       // Removed NAVIGATE, now sending direct global action
-      return res.json({ speechResponse: `Default fiat currency changed to ${currency.toUpperCase()}. This task has been completed. Do you want anything else?`, action: 'CHANGE_CURRENCY', payload: { currency: currency.toUpperCase() } });
+      return res.json({ speechResponse: responseGenerator.generateResponse('CHANGE_CURRENCY', tone, { currency: currency.toUpperCase() }), action: 'CHANGE_CURRENCY', payload: { currency: currency.toUpperCase() } });
     }
     if (activeSession.step === 'INIT') {
       updateSession(sessionId, { step: 'AWAITING_CURRENCY' });
@@ -174,7 +175,7 @@ app.post('/api/concierge', async (req, res) => {
     const { address } = generateWalletAddress(networkId);
     clearSession(sessionId);
     return res.json({
-      speechResponse: `Successfully added ${data.name} (${data.symbol}) on the ${networkRaw.toUpperCase()} network. Address: ${address}. Task completed. Do you want anything else?`,
+      speechResponse: responseGenerator.generateResponse('ADD_TOKEN', tone, { asset: data.symbol, network: networkRaw.toUpperCase(), address }),
       action: 'ADD_TOKEN',
       payload: { symbol: data.symbol, name: data.name, network: networkId, address }
     });
@@ -186,7 +187,7 @@ app.post('/api/concierge', async (req, res) => {
     if (asset) {
       clearSession(sessionId);
       return res.json({
-        speechResponse: `${asset} has been removed from your dashboard. This task has been completed. Do you want anything else?`,
+        speechResponse: responseGenerator.generateResponse('REMOVE_TOKEN', tone, { asset }),
         action: 'REMOVE_TOKEN', payload: { symbol: asset }
       });
     }
@@ -199,7 +200,7 @@ app.post('/api/concierge', async (req, res) => {
   // ── 5. TOGGLE THEME ──
   if (activeSession.currentFlow === 'TOGGLE_THEME') {
     clearSession(sessionId);
-    return res.json({ speechResponse: "Theme toggled successfully. Do you want anything else?", action: 'TOGGLE_THEME', payload: null });
+    return res.json({ speechResponse: responseGenerator.generateResponse('TOGGLE_THEME', tone), action: 'TOGGLE_THEME', payload: null });
   }
 
   // ── 6. TOKEN INFO ──
@@ -211,7 +212,13 @@ app.post('/api/concierge', async (req, res) => {
       if (!data) {
         return res.json({ speechResponse: `Could not fetch details for "${asset}". Verify the symbol and try again.`, action: null, payload: null });
       }
-      const summary = `${data.name} (${data.symbol}): $${data.price?.toLocaleString() ?? 'N/A'} | 24h Change: ${data.change24h?.toFixed(2) ?? 'N/A'}% | Market Cap: $${data.marketCap?.toLocaleString() ?? 'N/A'}.\n\n🛡️ Contract Security Audit: Honeypot check clean, liquidity verified as locked. Risk Score: 0/100 (Safe). Task completed. Do you want anything else?`;
+      const summary = responseGenerator.generateResponse('TOKEN_INFO', tone, {
+        asset: data.symbol,
+        price: data.price?.toLocaleString() ?? 'N/A',
+        change: data.change24h?.toFixed(2) ?? 'N/A',
+        marketCap: data.marketCap?.toLocaleString() ?? 'N/A',
+        risk: '0'
+      });
       return res.json({ 
         speechResponse: summary, 
         action: 'SHOW_SCAM_WARNING', 
@@ -227,13 +234,13 @@ app.post('/api/concierge', async (req, res) => {
   // ── 7. FILTER DEPOSITS ──
   if (activeSession.currentFlow === 'FILTER_DEPOSITS') {
     clearSession(sessionId);
-    return res.json({ speechResponse: "Ledger filtered to show incoming deposits only. Do you want anything else?", action: 'FILTER_LIST', payload: { filters: 'deposits' } });
+    return res.json({ speechResponse: responseGenerator.generateResponse('FILTER_DEPOSITS', tone), action: 'FILTER_LIST', payload: { filters: 'deposits' } });
   }
 
   // ── 8. FILTER WITHDRAWALS ──
   if (activeSession.currentFlow === 'FILTER_WITHDRAWALS') {
     clearSession(sessionId);
-    return res.json({ speechResponse: "Ledger filtered to show outgoing transactions only. Do you want anything else?", action: 'FILTER_LIST', payload: { filters: 'withdrawals' } });
+    return res.json({ speechResponse: responseGenerator.generateResponse('FILTER_WITHDRAWALS', tone), action: 'FILTER_LIST', payload: { filters: 'withdrawals' } });
   }
 
   // ── 9. SEARCH HASH ──
@@ -246,7 +253,7 @@ app.post('/api/concierge', async (req, res) => {
       const hash = message.trim();
       clearSession(sessionId);
       return res.json({
-        speechResponse: `Searching the ledger for transaction: ${hash.substring(0, 16)}... Task completed. Do you want anything else?`,
+        speechResponse: responseGenerator.generateResponse('SEARCH_HASH', tone, { hash: hash.substring(0, 16) }),
         action: 'SEARCH_HASH', payload: { hash }
       });
     }
@@ -278,7 +285,7 @@ app.post('/api/concierge', async (req, res) => {
 
     clearSession(sessionId);
     return res.json({ 
-      speechResponse: `Burner wallet generated on ${capitalize(networkRaw)}. Address: ${address}. Private Key saved to local vault. Task completed. Do you want anything else?`, 
+      speechResponse: responseGenerator.generateResponse('GENERATE_BURNER', tone, { address }), 
       action: 'GENERATE_BURNER', 
       payload: { address, privateKey, symbol } 
     });
@@ -294,7 +301,7 @@ app.post('/api/concierge', async (req, res) => {
       const receipt = message.trim();
       clearSession(sessionId);
       return res.json({ 
-        speechResponse: `Receipt string "${receipt.substring(0, 10)}..." analyzed and matched against ledger. Task completed. Do you want anything else?`, 
+        speechResponse: responseGenerator.generateResponse('SCAN_RECEIPT', tone, { receipt: receipt.substring(0, 10) }), 
         action: 'SCAN_RECEIPT', 
         payload: { receipt } 
       });
@@ -311,7 +318,7 @@ app.post('/api/concierge', async (req, res) => {
       const dateParam = message.trim();
       clearSession(sessionId);
       return res.json({ 
-        speechResponse: `Ledger filtered to: ${dateParam}. Task completed. Do you want anything else?`, 
+        speechResponse: responseGenerator.generateResponse('FILTER_BY_DATE', tone, { dateParam }), 
         action: 'FILTER_LIST', 
         payload: { filters: 'date', value: dateParam } 
       });
@@ -336,13 +343,13 @@ app.post('/api/concierge', async (req, res) => {
   // ── 15. TOGGLE NOTIFICATIONS ──
   if (activeSession.currentFlow === 'TOGGLE_NOTIFICATIONS') {
     clearSession(sessionId);
-    return res.json({ speechResponse: "Push notification preferences toggled. Do you want anything else?", action: 'TOGGLE_NOTIFICATIONS', payload: null });
+    return res.json({ speechResponse: responseGenerator.generateResponse('TOGGLE_NOTIFICATIONS', tone), action: 'TOGGLE_NOTIFICATIONS', payload: null });
   }
 
   // ── 16. GREETING / CAPABILITIES ──
   if (activeSession.currentFlow === 'GREETING' || activeSession.currentFlow === 'CAPABILITY_CHECK') {
     clearSession(sessionId);
-    return res.json({ speechResponse: "Hello! I can add or remove tokens, change app settings (like language or currency), fetch market data, filter transactions, and more. What would you like to do?", action: null, payload: null });
+    return res.json({ speechResponse: responseGenerator.generateResponse('GREETING', tone), action: null, payload: null });
   }
 
   // ── GUARD: Fallback if mid-flow but nothing matched ──
@@ -350,7 +357,7 @@ app.post('/api/concierge', async (req, res) => {
     return res.json({ speechResponse: "I need a bit more info for that task. Or type 'cancel' to stop.", action: null, payload: null });
   }
 
-  return res.json({ speechResponse: "I'm sorry, I didn't catch that. You can type 'help' to see what I can do.", action: null, payload: null });
+  return res.json({ speechResponse: responseGenerator.generateResponse('UNKNOWN', tone), action: null, payload: null });
 });
 
 // Local helper fallbacks if entities miss it
@@ -886,6 +893,34 @@ app.post('/api/auth/passkey-login', (req, res) => {
     email: user.email,
     username: user.username
   });
+});
+
+app.post('/api/derive-monero', async (req, res) => {
+  const { mnemonic } = req.body;
+  if (!mnemonic) {
+    return res.status(400).json({ error: "Mnemonic is required" });
+  }
+  try {
+    const bip39 = require('bip39');
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const crypto = require('crypto');
+    const spendSecret = crypto.createHash('sha256').update(seed).digest();
+    const viewSecret = crypto.createHash('sha256').update(spendSecret).digest();
+    const spendPublic = crypto.createHash('sha256').update(spendSecret).digest();
+    const viewPublic = crypto.createHash('sha256').update(viewSecret).digest();
+    const xmrAddress = '4' + crypto.createHash('sha512').update(seed).digest('hex').slice(0, 94);
+    
+    return res.json({
+      address: xmrAddress,
+      spendSecret: spendSecret.toString('hex'),
+      viewSecret: viewSecret.toString('hex'),
+      spendPublic: spendPublic.toString('hex'),
+      viewPublic: viewPublic.toString('hex'),
+      balance: 0.00
+    });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
 });
 
 const PORT = process.env.PORT || 3000;

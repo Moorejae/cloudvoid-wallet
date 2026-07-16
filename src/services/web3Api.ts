@@ -1,9 +1,10 @@
 import axios from 'axios';
 
 // ──────── Configuration ────────
-export const API_BASE_URL = (typeof window !== 'undefined' && window.location.hostname.includes('cloudvoid.online'))
-  ? 'https://api.cloudvoid.online'
-  : 'http://localhost:3000';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 
+  ((typeof window !== 'undefined' && window.location.hostname.includes('cloudvoid.online'))
+    ? 'https://api.cloudvoid.online'
+    : 'http://localhost:3000');
 
 const api = axios.create({
   baseURL: API_BASE_URL,

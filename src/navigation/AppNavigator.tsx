@@ -36,6 +36,7 @@ import ReceiveScreen from '../screens/ReceiveScreen';
 import SwapScreen from '../screens/SwapScreen';
 import CloudBackupScreen from '../screens/CloudBackupScreen';
 import ConnectHardwareWalletScreen from '../screens/ConnectHardwareWalletScreen';
+import MoneroViewerScreen from '../screens/MoneroViewerScreen';
 
 // Web3 Flow Screens
 import DAppsScreen from '../screens/DAppsScreen';
@@ -309,6 +310,7 @@ export default function AppNavigator() {
             <Stack.Screen name="AddCustomRPC" component={AddCustomRPCScreen} />
             <Stack.Screen name="LocalLatencyPings" component={LocalLatencyPingsScreen} />
             <Stack.Screen name="ManageWallets" component={ManageWalletsScreen} />
+            <Stack.Screen name="MoneroViewer" component={MoneroViewerScreen} />
             <Stack.Screen name="CurrencySelection" component={CurrencySelectionScreen} />
             <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
             <Stack.Screen name="ThemeMode" component={ThemeModeScreen} />

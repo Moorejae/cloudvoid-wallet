@@ -85,11 +85,31 @@ export default function AIBrain({ currentRouteName = 'Wallet' }: { currentRouteN
     }, 100);
   };
 
+  const addMessageStream = (text: string) => {
+    const messageId = Math.random().toString();
+    setMessages(prev => [...prev, { id: messageId, text: '', sender: 'ai' }]);
+    
+    let currentText = '';
+    const words = text.split(' ');
+    let wordIndex = 0;
+    
+    const interval = setInterval(() => {
+      if (wordIndex < words.length) {
+        currentText += (wordIndex === 0 ? '' : ' ') + words[wordIndex];
+        setMessages(prev => prev.map(msg => msg.id === messageId ? { ...msg, text: currentText } : msg));
+        wordIndex++;
+        flatListRef.current?.scrollToEnd({ animated: true });
+      } else {
+        clearInterval(interval);
+      }
+    }, 80);
+  };
+
   const processAIResponse = (data: any) => {
     const { speechResponse, action, payload } = data;
     
     if (speechResponse) {
-      addMessage(speechResponse, 'ai');
+      addMessageStream(speechResponse);
     }
 
     if (action) {
@@ -168,11 +188,14 @@ export default function AIBrain({ currentRouteName = 'Wallet' }: { currentRouteN
     setIsTyping(true);
 
     try {
+      const tones = ['casual', 'professional', 'empathetic', 'funny'];
+      const randomTone = tones[Math.floor(Math.random() * tones.length)];
       const response = await axios.post(`${API_BASE_URL}/api/concierge`, { 
         message: command, 
-        currentScreen: 'Wallet', 
-        sessionToken: 'local_session_001', 
-        directAction: true 
+        currentScreen: currentRouteName, 
+        sessionToken: walletStore.activeWalletId || 'local_session_001', 
+        directAction: true,
+        tone: randomTone
       });
       setIsTyping(false);
       processAIResponse(response.data);
@@ -193,10 +216,13 @@ export default function AIBrain({ currentRouteName = 'Wallet' }: { currentRouteN
     setIsTyping(true);
 
     try {
+      const tones = ['casual', 'professional', 'empathetic', 'funny'];
+      const randomTone = tones[Math.floor(Math.random() * tones.length)];
       const response = await axios.post(`${API_BASE_URL}/api/concierge`, { 
         message: userMsg, 
-        currentScreen: 'Wallet', 
-        sessionToken: 'local_session_001' 
+        currentScreen: currentRouteName, 
+        sessionToken: walletStore.activeWalletId || 'local_session_001',
+        tone: randomTone
       });
       setIsTyping(false);
       processAIResponse(response.data);
