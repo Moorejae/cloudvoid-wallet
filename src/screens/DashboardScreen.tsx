@@ -19,11 +19,11 @@ interface TokenItem {
 }
 
 const DEFAULT_TOKENS: TokenItem[] = [
-  { symbol: 'BTC', name: 'Bitcoin', price: 30121.75, change: 0.12, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', sparklineData: [40, 45, 42, 50, 48, 55, 60] },
-  { symbol: 'ETH', name: 'Ethereum', price: 121.73, change: -0.56, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [60, 55, 58, 45, 48, 40, 35] },
-  { symbol: 'BNB', name: 'BNB', price: 38.88, change: -0.03, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png', sparklineData: [45, 48, 42, 40, 38, 42, 38] },
-  { symbol: 'XMR', name: 'Monero', price: 107.23, change: 3.45, iconUrl: 'https://cryptologos.cc/logos/monero-xmr-logo.png', sparklineData: [20, 25, 30, 40, 50, 55, 60] },
-  { symbol: 'USDT', name: 'Tether', price: 1.00, change: -0.01, iconUrl: 'https://cryptologos.cc/logos/tether-usdt-logo.png', sparklineData: [50, 52, 48, 49, 45, 42, 40] },
+  { symbol: 'BTC', name: 'Bitcoin', price: 30121.75, change: 0.12, iconUrl: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png', sparklineData: [40, 45, 42, 50, 48, 55, 60] },
+  { symbol: 'ETH', name: 'Ethereum', price: 121.73, change: -0.56, iconUrl: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png', sparklineData: [60, 55, 58, 45, 48, 40, 35] },
+  { symbol: 'BNB', name: 'BNB', price: 38.88, change: -0.03, iconUrl: 'https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png', sparklineData: [45, 48, 42, 40, 38, 42, 38] },
+  { symbol: 'XMR', name: 'Monero', price: 107.23, change: 3.45, iconUrl: 'https://assets.coingecko.com/coins/images/69/large/monero_logo.png', sparklineData: [20, 25, 30, 40, 50, 55, 60] },
+  { symbol: 'USDT', name: 'Tether', price: 1.00, change: -0.01, iconUrl: 'https://assets.coingecko.com/coins/images/325/large/Tether.png', sparklineData: [50, 52, 48, 49, 45, 42, 40] },
 ];
 
 export default function DashboardScreen({ navigation }: any) {

@@ -95,7 +95,7 @@ export default function CryptoTradingScreen() {
               />
               <TouchableOpacity style={styles.tokenSelector}>
                 <Image 
-                  source={{ uri: userTokens.find(t => t.symbol === fromToken)?.iconUrl || 'https://cryptologos.cc/logos/tether-usdt-logo.png' }} 
+                  source={{ uri: userTokens.find(t => t.symbol === fromToken)?.iconUrl || 'https://assets.coingecko.com/coins/images/325/large/Tether.png' }} 
                   style={styles.tokenIconSm} 
                 />
                 <Text style={styles.tokenSymbol}>{fromToken}</Text>
@@ -127,7 +127,7 @@ export default function CryptoTradingScreen() {
               </Text>
               <TouchableOpacity style={styles.tokenSelector}>
                 <Image 
-                  source={{ uri: trending.find(t => t.symbol === toToken)?.icon || 'https://cryptologos.cc/logos/dogecoin-doge-logo.png' }} 
+                  source={{ uri: trending.find(t => t.symbol === toToken)?.icon || 'https://assets.coingecko.com/coins/images/325/large/dogecoin.png' }} 
                   style={styles.tokenIconSm} 
                 />
                 <Text style={styles.tokenSymbol}>{toToken}</Text>

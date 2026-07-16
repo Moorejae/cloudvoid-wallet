@@ -483,12 +483,12 @@ app.post('/api/wallet/register', async (req, res) => {
     const balances = await fetchRealBalances(addresses);
 
     const defaultTokens = [
-      { symbol: 'BTC', name: 'Bitcoin', price: 64210.50, balance: balances.BTC || 0, valueUSD: (balances.BTC || 0) * 64210.50, iconUrl: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png', change: 1.25 },
-      { symbol: 'ETH', name: 'Ethereum', price: 3485.20, balance: balances.ETH || 0, valueUSD: (balances.ETH || 0) * 3485.20, iconUrl: 'https://cryptologos.cc/logos/ethereum-eth-logo.png', change: -0.52 },
-      { symbol: 'BNB', name: 'BNB', price: 575.30, balance: balances.BNB || 0, valueUSD: (balances.BNB || 0) * 575.30, iconUrl: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png', change: 0.85 },
-      { symbol: 'SOL', name: 'Solana', price: 145.80, balance: balances.SOL || 0, valueUSD: (balances.SOL || 0) * 145.80, iconUrl: 'https://cryptologos.cc/logos/solana-sol-logo.png', change: 4.12 },
-      { symbol: 'TRX', name: 'Tron', price: 0.12, balance: balances.TRX || 0, valueUSD: (balances.TRX || 0) * 0.12, iconUrl: 'https://cryptologos.cc/logos/tron-trx-logo.png', change: 1.05 },
-      { symbol: 'XMR', name: 'Monero', price: 167.00, balance: balances.XMR || 0, valueUSD: (balances.XMR || 0) * 167.00, iconUrl: 'https://cryptologos.cc/logos/monero-xmr-logo.png', change: 3.45 }
+      { symbol: 'BTC', name: 'Bitcoin', price: 64210.50, balance: balances.BTC || 0, valueUSD: (balances.BTC || 0) * 64210.50, iconUrl: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png', change: 1.25 },
+      { symbol: 'ETH', name: 'Ethereum', price: 3485.20, balance: balances.ETH || 0, valueUSD: (balances.ETH || 0) * 3485.20, iconUrl: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png', change: -0.52 },
+      { symbol: 'BNB', name: 'BNB', price: 575.30, balance: balances.BNB || 0, valueUSD: (balances.BNB || 0) * 575.30, iconUrl: 'https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png', change: 0.85 },
+      { symbol: 'SOL', name: 'Solana', price: 145.80, balance: balances.SOL || 0, valueUSD: (balances.SOL || 0) * 145.80, iconUrl: 'https://assets.coingecko.com/coins/images/4128/large/solana.png', change: 4.12 },
+      { symbol: 'TRX', name: 'Tron', price: 0.12, balance: balances.TRX || 0, valueUSD: (balances.TRX || 0) * 0.12, iconUrl: 'https://assets.coingecko.com/coins/images/1094/large/tron-logo.png', change: 1.05 },
+      { symbol: 'XMR', name: 'Monero', price: 167.00, balance: balances.XMR || 0, valueUSD: (balances.XMR || 0) * 167.00, iconUrl: 'https://assets.coingecko.com/coins/images/69/large/monero_logo.png', change: 3.45 }
     ];
 
     return res.json({
@@ -557,12 +557,12 @@ app.get('/api/wallet/assets', checkAuth, async (req, res) => {
   const balances = await fetchRealBalances(addresses);
   
   const assets = [
-    { symbol: 'BTC', name: 'Bitcoin', balance: balances.BTC || 0, price: priceCache['BTC']?.usd || 64210.50, valueUSD: (balances.BTC || 0) * (priceCache['BTC']?.usd || 64210.50), change24h: priceCache['BTC']?.usd_24h_change || 1.25, icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png' },
-    { symbol: 'ETH', name: 'Ethereum', balance: balances.ETH || 0, price: priceCache['ETH']?.usd || 3485.20, valueUSD: (balances.ETH || 0) * (priceCache['ETH']?.usd || 3485.20), change24h: priceCache['ETH']?.usd_24h_change || -0.52, icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png' },
-    { symbol: 'BNB', name: 'BNB', balance: balances.BNB || 0, price: priceCache['BNB']?.usd || 575.30, valueUSD: (balances.BNB || 0) * (priceCache['BNB']?.usd || 575.30), change24h: priceCache['BNB']?.usd_24h_change || 0.85, icon: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png' },
-    { symbol: 'SOL', name: 'Solana', balance: balances.SOL || 0, price: priceCache['SOL']?.usd || 145.80, valueUSD: (balances.SOL || 0) * (priceCache['SOL']?.usd || 145.80), change24h: priceCache['SOL']?.usd_24h_change || 4.12, icon: 'https://cryptologos.cc/logos/solana-sol-logo.png' },
-    { symbol: 'TRX', name: 'Tron', balance: balances.TRX || 0, price: priceCache['TRX']?.usd || 0.12, valueUSD: (balances.TRX || 0) * (priceCache['TRX']?.usd || 0.12), change24h: priceCache['TRX']?.usd_24h_change || 1.05, icon: 'https://cryptologos.cc/logos/tron-trx-logo.png' },
-    { symbol: 'XMR', name: 'Monero', balance: balances.XMR || 0, price: priceCache['XMR']?.usd || 167.00, valueUSD: (balances.XMR || 0) * (priceCache['XMR']?.usd || 167.00), change24h: priceCache['XMR']?.usd_24h_change || 3.45, icon: 'https://cryptologos.cc/logos/monero-xmr-logo.png' }
+    { symbol: 'BTC', name: 'Bitcoin', balance: balances.BTC || 0, price: priceCache['BTC']?.usd || 64210.50, valueUSD: (balances.BTC || 0) * (priceCache['BTC']?.usd || 64210.50), change24h: priceCache['BTC']?.usd_24h_change || 1.25, icon: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' },
+    { symbol: 'ETH', name: 'Ethereum', balance: balances.ETH || 0, price: priceCache['ETH']?.usd || 3485.20, valueUSD: (balances.ETH || 0) * (priceCache['ETH']?.usd || 3485.20), change24h: priceCache['ETH']?.usd_24h_change || -0.52, icon: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png' },
+    { symbol: 'BNB', name: 'BNB', balance: balances.BNB || 0, price: priceCache['BNB']?.usd || 575.30, valueUSD: (balances.BNB || 0) * (priceCache['BNB']?.usd || 575.30), change24h: priceCache['BNB']?.usd_24h_change || 0.85, icon: 'https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png' },
+    { symbol: 'SOL', name: 'Solana', balance: balances.SOL || 0, price: priceCache['SOL']?.usd || 145.80, valueUSD: (balances.SOL || 0) * (priceCache['SOL']?.usd || 145.80), change24h: priceCache['SOL']?.usd_24h_change || 4.12, icon: 'https://assets.coingecko.com/coins/images/4128/large/solana.png' },
+    { symbol: 'TRX', name: 'Tron', balance: balances.TRX || 0, price: priceCache['TRX']?.usd || 0.12, valueUSD: (balances.TRX || 0) * (priceCache['TRX']?.usd || 0.12), change24h: priceCache['TRX']?.usd_24h_change || 1.05, icon: 'https://assets.coingecko.com/coins/images/1094/large/tron-logo.png' },
+    { symbol: 'XMR', name: 'Monero', balance: balances.XMR || 0, price: priceCache['XMR']?.usd || 167.00, valueUSD: (balances.XMR || 0) * (priceCache['XMR']?.usd || 167.00), change24h: priceCache['XMR']?.usd_24h_change || 3.45, icon: 'https://assets.coingecko.com/coins/images/69/large/monero_logo.png' }
   ];
 
   const totalValueUSD = assets.reduce((sum, a) => sum + a.valueUSD, 0);
