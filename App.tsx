@@ -7,12 +7,18 @@ import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 
-// Inject Ionicons font face for web platform to prevent glitched square rendering
+// Inject vector icons font face for web platform to prevent glitched square rendering
 if (Platform.OS === 'web') {
-  const iconFontStyles = `@font-face {
-    font-family: 'Ionicons';
-    src: url(${require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf')}) format('truetype');
-  }`;
+  const iconFontStyles = `
+    @font-face {
+      font-family: 'Ionicons';
+      src: url('https://unpkg.com/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf') format('truetype');
+    }
+    @font-face {
+      font-family: 'MaterialCommunityIcons';
+      src: url('https://unpkg.com/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf') format('truetype');
+    }
+  `;
   
   const style = document.createElement('style');
   style.type = 'text/css';
