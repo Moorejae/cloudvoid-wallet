@@ -239,15 +239,7 @@ function MainTabNavigator() {
           ),
         }}
       />
-      <Tab.Screen
-        name="Web3"
-        component={Web3PortalScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="compass-outline" size={size || 24} color={color} />
-          ),
-        }}
-      />
+
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}

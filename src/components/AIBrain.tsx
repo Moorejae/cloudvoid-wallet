@@ -205,9 +205,10 @@ export default function AIBrain({ currentRouteName = 'Wallet' }: { currentRouteN
       });
       setIsTyping(false);
       processAIResponse(response.data);
-    } catch (error) {
+    } catch (error: any) {
       setIsTyping(false);
-      addMessage('Error connecting to AI Backend.', 'ai');
+      console.warn("AI Backend Error:", error.message);
+      addMessage(`Error connecting to AI Backend: ${error.message}`, 'ai');
     }
   };
 
@@ -232,9 +233,10 @@ export default function AIBrain({ currentRouteName = 'Wallet' }: { currentRouteN
       });
       setIsTyping(false);
       processAIResponse(response.data);
-    } catch (error) {
+    } catch (error: any) {
       setIsTyping(false);
-      addMessage("Error connecting to AI Backend Service.", 'ai');
+      console.warn("AI Backend Error:", error.message);
+      addMessage(`Error connecting to AI Backend: ${error.message}`, 'ai');
     }
   };
 
