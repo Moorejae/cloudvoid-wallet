@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, AppState } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, AppState, Platform } from 'react-native';
 import { CloudVoidTheme } from '../theme/tokens';
 import { generateNewSeedPhrase } from '../services/wallet-engine';
 import * as Clipboard from 'expo-clipboard';
 import * as ScreenCapture from 'expo-screen-capture';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import Svg, { Path } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 
 const GoogleDriveIcon = ({ size = 20 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 87.3 78">
@@ -68,29 +71,38 @@ export default function CreateWalletScreen({ navigation }: any) {
     await Clipboard.setStringAsync(mnemonic);
     setClipboardTimer(30);
     Alert.alert('Copied', 'Seed phrase copied to clipboard. It will be cleared in 30 seconds for security.');
-    navigation.navigate('SeedPhraseVerify', { mnemonic });
   };
 
   const handleCloudSave = () => {
+    // Navigate to CloudBackup with the mnemonic
     navigation.navigate('CloudBackup', { mode: 'export', mnemonic });
   };
 
-  const handleDownloadTxt = () => {
+  const handleDownloadTxt = async () => {
+    const fileContent = `CloudVoid Wallet Secret Recovery Phrase:\n\n${mnemonic}\n\nKeep this safe. Do not share with anyone.`;
     if (Platform.OS === 'web') {
       const element = document.createElement("a");
-      const file = new Blob([`CloudVoid Wallet Secret Recovery Phrase:\n\n${mnemonic}\n\nKeep this safe. Do not share with anyone.`], {type: 'text/plain'});
+      const file = new Blob([fileContent], { type: 'text/plain' });
       element.href = URL.createObjectURL(file);
       element.download = "cloudvoid_secret_phrase.txt";
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
-      navigation.navigate('SeedPhraseVerify', { mnemonic });
+      Alert.alert('Success', 'Backup text file downloaded successfully.');
     } else {
-      Alert.alert('Not Supported', 'Downloading to hard drive is only supported on the web platform.');
+      try {
+        const fileUri = FileSystem.documentDirectory + 'cloudvoid_secret_phrase.txt';
+        await FileSystem.writeAsStringAsync(fileUri, fileContent, { encoding: FileSystem.EncodingType.UTF8 });
+        await Sharing.shareAsync(fileUri);
+      } catch (err: any) {
+        Alert.alert('Error', 'Could not save backup file: ' + err.message);
+      }
     }
   };
 
-  // Primary nav button removed, triggered by copy or cloud save.
+  const handleContinue = () => {
+    navigation.navigate('SeedPhraseVerify', { mnemonic });
+  };
 
   const words = mnemonic.split(' ');
 
@@ -107,6 +119,19 @@ export default function CreateWalletScreen({ navigation }: any) {
         <Text style={styles.warningSub}>
           Write down these 12 words in order. You will not be shown them again. Keep them offline!
         </Text>
+      </View>
+
+      {/* Top Copy Section */}
+      <View style={styles.topCopyContainer}>
+        <TouchableOpacity 
+          style={[styles.copyBtn, CloudVoidTheme.shadows.neonViolet]} 
+          onPress={handleCopy}
+        >
+          <Ionicons name="copy-outline" size={18} color={CloudVoidTheme.colors.accent} />
+          <Text style={styles.copyBtnText}>
+            {clipboardTimer > 0 ? `Wiping Cache (${clipboardTimer}s)` : 'Copy Seed Phrase'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* 2-Column Word Grid */}
@@ -133,23 +158,25 @@ export default function CreateWalletScreen({ navigation }: any) {
         </Text>
       </View>
 
-      {/* Action Buttons */}
+      {/* Bottom Action / Backup Buttons */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.secondaryBtn} onPress={handleCopy}>
-          <Text style={styles.secondaryBtnText}>
-            {clipboardTimer > 0 ? `Wiping Cache (${clipboardTimer}s)` : 'Copy to Clipboard'}
-          </Text>
-        </TouchableOpacity>
-
         <TouchableOpacity style={styles.secondaryBtn} onPress={handleCloudSave}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <GoogleDriveIcon size={18} />
-            <Text style={styles.secondaryBtnText}>Backup to Google Drive</Text>
+            <Text style={styles.secondaryBtnText}>Save to Google Drive</Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.secondaryBtn} onPress={handleDownloadTxt}>
-          <Text style={styles.secondaryBtnText}>Download to Hard Drive</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="download-outline" size={18} color={CloudVoidTheme.colors.textPrimary} />
+            <Text style={styles.secondaryBtnText}>Download Backup File</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Primary Continue Button */}
+        <TouchableOpacity style={styles.primaryBtn} onPress={handleContinue}>
+          <Text style={styles.primaryBtnText}>I've Secured My Recovery Phrase</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -175,7 +202,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   title: {
     fontSize: 28,
@@ -188,6 +215,26 @@ const styles = StyleSheet.create({
     color: CloudVoidTheme.colors.warning,
     lineHeight: 20,
     fontWeight: '600',
+  },
+  topCopyContainer: {
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  copyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(139, 92, 246, 0.08)',
+    borderWidth: 1,
+    borderColor: CloudVoidTheme.colors.accent,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  copyBtnText: {
+    color: CloudVoidTheme.colors.accent,
+    fontSize: 14,
+    fontWeight: '700',
   },
   grid: {
     flexDirection: 'row',
@@ -279,6 +326,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 5,
+    marginTop: 12,
   },
   primaryBtnText: {
     color: CloudVoidTheme.colors.textPrimary,

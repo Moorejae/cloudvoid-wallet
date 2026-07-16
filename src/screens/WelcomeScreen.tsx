@@ -95,7 +95,7 @@ export default function WelcomeScreen({ navigation }: any) {
           style={[styles.btn, styles.registerBtn, CloudVoidTheme.shadows.neonViolet]}
           onPress={() => navigation.navigate('CreateWallet')}
         >
-          <Text style={styles.btnText}>Create Account</Text>
+          <Text style={styles.btnText}>Create Wallet</Text>
         </TouchableOpacity>
       </View>
     </View>

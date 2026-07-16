@@ -11,10 +11,6 @@ import { useWalletStore } from '../stores/walletStore';
 
 // Import Screens
 import WelcomeScreen from '../screens/WelcomeScreen';
-import LoginScreen from '../screens/LoginScreen';
-import RegisterScreen from '../screens/RegisterScreen';
-import EmailVerifyScreen from '../screens/EmailVerifyScreen';
-import WalletSetupScreen from '../screens/WalletSetupScreen';
 import ImportWalletScreen from '../screens/ImportWalletScreen';
 import CreateWalletScreen from '../screens/CreateWalletScreen';
 import SeedPhraseVerifyScreen from '../screens/SeedPhraseVerifyScreen';
@@ -31,6 +27,8 @@ import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
 import ThemeModeScreen from '../screens/ThemeModeScreen';
 import TransactionReceiptScreen from '../screens/TransactionReceiptScreen';
 import Web3PortalScreen from '../screens/Web3PortalScreen';
+import TerminateAccountScreen from '../screens/TerminateAccountScreen';
+import LegalDocumentScreen from '../screens/LegalDocumentScreen';
 
 // Modal Group Screens
 import SendScreen from '../screens/SendScreen';
@@ -194,7 +192,6 @@ function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
-      <Stack.Screen name="WalletSetup" component={WalletSetupScreen} />
       <Stack.Screen name="ImportWallet" component={ImportWalletScreen} />
       <Stack.Screen name="CreateWallet" component={CreateWalletScreen} />
       <Stack.Screen name="SeedPhraseVerify" component={SeedPhraseVerifyScreen} />

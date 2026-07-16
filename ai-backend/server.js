@@ -425,6 +425,50 @@ app.post('/api/wallet/register', (req, res) => {
   });
 });
 
+// ── 9. GET /api/wallet/balance — Wallet token balances ──
+app.get('/api/wallet/balance', (req, res) => {
+  const balances = {
+    BTC: 0,
+    ETH: 0,
+    BNB: 0,
+    SOL: 0,
+    USDT: 0,
+    XMR: 0,
+    DOGE: 0,
+    APT: 0
+  };
+
+  return res.json({
+    success: true,
+    data: {
+      balances,
+      totalValueUSD: 0
+    }
+  });
+});
+
+// ── 10. GET /api/wallet/assets — Full asset details ──
+app.get('/api/wallet/assets', (req, res) => {
+  const assets = [
+    { symbol: 'BTC', name: 'Bitcoin', balance: 0, price: 64210.50, valueUSD: 0, change24h: 1.25, icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png' },
+    { symbol: 'ETH', name: 'Ethereum', balance: 0, price: 3485.20, valueUSD: 0, change24h: -0.52, icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png' },
+    { symbol: 'BNB', name: 'BNB', balance: 0, price: 575.30, valueUSD: 0, change24h: 0.85, icon: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png' },
+    { symbol: 'SOL', name: 'Solana', balance: 0, price: 145.80, valueUSD: 0, change24h: 4.12, icon: 'https://cryptologos.cc/logos/solana-sol-logo.png' },
+    { symbol: 'USDT', name: 'Tether', balance: 0, price: 1.00, valueUSD: 0, change24h: 0.01, icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png' },
+    { symbol: 'XMR', name: 'Monero', balance: 0, price: 167.00, valueUSD: 0, change24h: 3.45, icon: 'https://cryptologos.cc/logos/monero-xmr-logo.png' },
+    { symbol: 'DOGE', name: 'Dogecoin', balance: 0, price: 0.1542, valueUSD: 0, change24h: 5.23, icon: 'https://cryptologos.cc/logos/dogecoin-doge-logo.png' },
+    { symbol: 'APT', name: 'Aptos', balance: 0, price: 8.42, valueUSD: 0, change24h: 2.41, icon: 'https://cryptologos.cc/logos/aptos-apt-logo.png' }
+  ];
+
+  return res.json({
+    success: true,
+    data: {
+      assets,
+      totalValueUSD: 0
+    }
+  });
+});
+
 // ══════════════════════════════════════════
 //  WEB3 PORTAL API ENDPOINTS
 // ══════════════════════════════════════════

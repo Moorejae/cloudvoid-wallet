@@ -6,6 +6,10 @@ import { useWalletStore } from '../stores/walletStore';
 import * as Haptics from 'expo-haptics';
 import { API_BASE_URL } from '../services/web3Api';
 import Svg, { Path } from 'react-native-svg';
+import * as bip39 from 'bip39';
+import { ethers } from 'ethers';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 
 const GoogleDriveIcon = ({ size = 20 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 87.3 78">
@@ -22,21 +26,98 @@ export default function ImportWalletScreen({ navigation }: any) {
   const setUserId = useWalletStore((state) => state.setUserId);
   const setMnemonic = useWalletStore((state) => state.setMnemonic);
 
+  const handleFileImport = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'text/plain',
+        copyToCacheDirectory: true
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const fileUri = result.assets[0].uri;
+      const fileContent = await FileSystem.readAsStringAsync(fileUri);
+      
+      const wordsMatches = fileContent.match(/[a-zA-Z]+/g);
+      if (wordsMatches) {
+        const cleanWords = wordsMatches.map(w => w.toLowerCase());
+        let foundMnemonic = false;
+        
+        // Scan for 12-word BIP39 mnemonic
+        for (let i = 0; i <= cleanWords.length - 12; i++) {
+          const slice12 = cleanWords.slice(i, i + 12).join(' ');
+          if (bip39.validateMnemonic(slice12)) {
+            setMnemonicInput(slice12);
+            Alert.alert('Imported from File', 'Valid 12-word seed phrase parsed and loaded successfully.');
+            foundMnemonic = true;
+            break;
+          }
+        }
+        
+        // Scan for 24-word BIP39 mnemonic if 12 not found
+        if (!foundMnemonic) {
+          for (let i = 0; i <= cleanWords.length - 24; i++) {
+            const slice24 = cleanWords.slice(i, i + 24).join(' ');
+            if (bip39.validateMnemonic(slice24)) {
+              setMnemonicInput(slice24);
+              Alert.alert('Imported from File', 'Valid 24-word seed phrase parsed and loaded successfully.');
+              foundMnemonic = true;
+              break;
+            }
+          }
+        }
+
+        if (!foundMnemonic) {
+          // Check for private key
+          const rawClean = fileContent.trim().replace(/^0x/i, '');
+          if (/^[0-9a-fA-F]{64}$/.test(rawClean)) {
+            setMnemonicInput(rawClean);
+            Alert.alert('Imported from File', 'Private key parsed and loaded successfully.');
+          } else {
+            // Fallback
+            const joined = cleanWords.join(' ');
+            setMnemonicInput(joined);
+            Alert.alert('File Loaded', 'Text file loaded. Please review and edit the seed phrase.');
+          }
+        }
+      } else {
+        Alert.alert('Empty File', 'The selected file does not contain any text.');
+      }
+    } catch (err: any) {
+      Alert.alert('File Error', 'Failed to read or parse file: ' + err.message);
+    }
+  };
+
   const handleImport = async () => {
-    const cleanPhrase = mnemonicInput.trim().toLowerCase();
-    const words = cleanPhrase.split(/\s+/);
-    if (words.length !== 12 && words.length !== 18 && words.length !== 24) {
-      Alert.alert('Invalid Phrase', 'Seed phrase must be 12, 18, or 24 words.');
+    const cleanInput = mnemonicInput.trim();
+    const isMnemonic = bip39.validateMnemonic(cleanInput.toLowerCase());
+    const isPrivateKey = /^(0x)?[0-9a-fA-F]{64}$/.test(cleanInput);
+
+    if (!isMnemonic && !isPrivateKey) {
+      Alert.alert('Invalid Import Data', 'The entered text is not a valid 12, 18, or 24-word seed phrase, or a 64-character private key.');
       return;
     }
 
     setIsSubmitting(true);
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Derive address locally
-      const address = '0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join('');
+      
+      let address = '';
+      if (isMnemonic) {
+        await setMnemonic(cleanInput.toLowerCase());
+        const wallet = ethers.Wallet.fromPhrase(cleanInput.toLowerCase());
+        address = wallet.address;
+      } else {
+        const pk = cleanInput.startsWith('0x') ? cleanInput : '0x' + cleanInput;
+        await setMnemonic(pk); // temporarily reuse mnemonic store for private key storage
+        const wallet = new ethers.Wallet(pk);
+        address = wallet.address;
+      }
 
-      await setMnemonic(cleanPhrase);
+      setUserId(address);
+      useWalletStore.getState().resetForNewWallet();
       
       // Register with backend with timeout
       try {
@@ -46,7 +127,7 @@ export default function ImportWalletScreen({ navigation }: any) {
         const response = await fetch(`${API_BASE_URL}/api/wallet/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address, importMethod: 'manual_import' }),
+          body: JSON.stringify({ address, importMethod: isMnemonic ? 'mnemonic_import' : 'private_key_import' }),
           signal: controller.signal as any
         });
         clearTimeout(timeoutId);
@@ -59,21 +140,12 @@ export default function ImportWalletScreen({ navigation }: any) {
         console.warn('API Registration failed or timed out, proceeding anyway:', apiError);
       }
 
-      setUserId(address);
-      useWalletStore.getState().resetForNewWallet();
       navigation.reset({
         index: 0,
         routes: [{ name: 'MainFlow' }],
       });
-    } catch (e) {
-      // Fallback
-      await setMnemonic(cleanPhrase);
-      setUserId('0x2dff76d3614301dd6bc1600b3445d9ed2bbd6c812b0a2a96c5c5fadeabc06ace');
-      useWalletStore.getState().resetForNewWallet();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainFlow' }],
-      });
+    } catch (e: any) {
+      Alert.alert('Import Error', 'Failed to derive wallet: ' + e.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -111,11 +183,11 @@ export default function ImportWalletScreen({ navigation }: any) {
 
           <TouchableOpacity 
             style={[styles.secondaryBtn, { marginBottom: 24 }]} 
-            onPress={() => navigation.navigate('ConnectHardwareWallet')}
+            onPress={handleFileImport}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="hardware-chip-outline" size={18} color={CloudVoidTheme.colors.textPrimary} />
-              <Text style={styles.secondaryBtnText}>Connect Hardware Wallet</Text>
+              <Ionicons name="document-text-outline" size={18} color={CloudVoidTheme.colors.textPrimary} />
+              <Text style={styles.secondaryBtnText}>Import from Backup File</Text>
             </View>
           </TouchableOpacity>
 
@@ -123,7 +195,7 @@ export default function ImportWalletScreen({ navigation }: any) {
             <TextInput
               style={styles.textInput}
               multiline
-              placeholder="Enter your seed phrase here..."
+              placeholder="Enter your seed phrase or private key here..."
               placeholderTextColor={CloudVoidTheme.colors.textDisabled}
               value={mnemonicInput}
               onChangeText={setMnemonicInput}
