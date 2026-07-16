@@ -72,6 +72,12 @@ export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
 
       setUserId(address);
       useWalletStore.getState().resetForNewWallet();
+      useWalletStore.getState().addWallet({
+        id: '1',
+        name: 'Main Wallet',
+        address: address,
+        status: 'Active'
+      });
       navigation.reset({
         index: 0,
         routes: [{ name: 'MainFlow' }],

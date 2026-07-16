@@ -108,6 +108,12 @@ export default function ImportWalletScreen({ navigation }: any) {
 
       setUserId(address);
       useWalletStore.getState().resetForNewWallet();
+      useWalletStore.getState().addWallet({
+        id: '1',
+        name: 'Main Wallet',
+        address: address,
+        status: 'Active'
+      });
       
       // Register with backend with timeout
       try {
