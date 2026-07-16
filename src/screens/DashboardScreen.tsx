@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert, Image, Platform, Modal, TextInput, ActivityIndicator } from 'react-native';
+import axios from 'axios';
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Circle } from 'react-native-svg';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
@@ -72,15 +73,88 @@ export default function DashboardScreen({ navigation }: any) {
   const symbol = CURRENCY_SYMBOLS[selectedCurrency] || '$';
   const rate = CURRENCY_RATES[selectedCurrency] || 1;
 
-  // Fetch real-time tokens from backend
+  // Fetch real-time tokens from backend with public API fallbacks
   useEffect(() => {
     let interval: NodeJS.Timeout;
+
+    const SYMBOL_TO_GECKO_ID: Record<string, string> = {
+      btc: 'bitcoin',
+      eth: 'ethereum',
+      bnb: 'binancecoin',
+      sol: 'solana',
+      xmr: 'monero',
+      usdt: 'tether',
+      trx: 'tron',
+      celo: 'celo',
+      apt: 'aptos',
+      matic: 'polygon',
+      ton: 'the-open-network',
+      doge: 'dogecoin',
+      shib: 'shiba-inu',
+      pepe: 'pepe',
+    };
+
+    const fetchFallbackPrices = async (symbols: string[]) => {
+      const pricesMap: Record<string, { price: number; change24h: number }> = {};
+      
+      // 1. Fetch from Binance (all symbols to support as many user-added tokens as possible)
+      try {
+        const binanceRes = await axios.get('https://api.binance.com/api/v3/ticker/24hr');
+        if (binanceRes.data && Array.isArray(binanceRes.data)) {
+          binanceRes.data.forEach((ticker: any) => {
+            if (ticker.symbol.endsWith('USDT')) {
+              const baseSymbol = ticker.symbol.replace('USDT', '');
+              pricesMap[baseSymbol] = {
+                price: parseFloat(ticker.lastPrice),
+                change24h: parseFloat(ticker.priceChangePercent),
+              };
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Binance fallback price fetch failed:', e);
+      }
+
+      // 2. Fetch from CoinGecko for anything not found on Binance or delisted (like XMR)
+      try {
+        const geckoIds = symbols
+          .map(s => SYMBOL_TO_GECKO_ID[s.toLowerCase()])
+          .filter(Boolean)
+          .join(',');
+        
+        if (geckoIds) {
+          const geckoRes = await axios.get(`https://api.coingecko.com/api/v3/simple/price`, {
+            params: {
+              ids: geckoIds,
+              vs_currencies: 'usd',
+              include_24hr_change: 'true'
+            }
+          });
+          
+          const geckoData = geckoRes.data;
+          Object.keys(SYMBOL_TO_GECKO_ID).forEach(sym => {
+            const geckoId = SYMBOL_TO_GECKO_ID[sym];
+            if (geckoData[geckoId]) {
+              const symUpper = sym.toUpperCase();
+              pricesMap[symUpper] = {
+                price: geckoData[geckoId].usd,
+                change24h: geckoData[geckoId].usd_24h_change || 0
+              };
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('CoinGecko fallback price fetch failed:', e);
+      }
+      
+      return pricesMap;
+    };
     
     const loadRealData = async () => {
       try {
         const { fetchWalletAssets } = require('../services/web3Api');
         const data = await fetchWalletAssets(userId);
-        if (data && data.assets) {
+        if (data && data.assets && data.assets.length > 0) {
           const mappedTokens = data.assets.map((asset: any) => ({
             symbol: asset.symbol,
             name: asset.name,
@@ -96,9 +170,30 @@ export default function DashboardScreen({ navigation }: any) {
             newBalances[asset.symbol] = asset.balance;
           });
           useWalletStore.getState().setBalances(newBalances);
+          return;
         }
       } catch (err) {
-        console.warn('Error fetching real data:', err);
+        console.warn('Error fetching from backend, trying public API fallback:', err);
+      }
+
+      // PUBLIC API FALLBACK (fetches all token symbols currently in store)
+      try {
+        const currentTokens = useWalletStore.getState().tokens;
+        const symbols = currentTokens.map(t => t.symbol);
+        const fallbackPrices = await fetchFallbackPrices(symbols);
+        
+        const mappedTokens = currentTokens.map((t: any) => {
+          const fallback = fallbackPrices[t.symbol.toUpperCase()];
+          return {
+            ...t,
+            price: fallback ? fallback.price : t.price,
+            change: fallback ? fallback.change24h : t.change
+          };
+        });
+        setTokens(mappedTokens);
+        useWalletStore.getState().setTokens(mappedTokens);
+      } catch (fallbackErr) {
+        console.error('Fallback price fetch failed completely:', fallbackErr);
       }
     };
 
