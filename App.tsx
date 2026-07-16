@@ -16,9 +16,6 @@ export default function App() {
     applyTheme(theme);
   }, [theme]);
 
-  if (!fontsLoaded) {
-    return null;
-  }
 
   return (
     <>
