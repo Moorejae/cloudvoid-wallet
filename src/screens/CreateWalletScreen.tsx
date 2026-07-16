@@ -16,8 +16,15 @@ export default function CreateWalletScreen({ navigation }: any) {
 
   useFocusEffect(
     React.useCallback(() => {
-      // Regenerate mnemonic securely every time screen comes into focus
-      const wallet = ethers.Wallet.createRandom();
+      // Regenerate mnemonic securely every time screen comes into focus.
+      // Ensure all 12 words are completely unique to prevent user confusion.
+      let wallet;
+      let phraseArray;
+      do {
+        wallet = ethers.Wallet.createRandom();
+        phraseArray = wallet.mnemonic?.phrase.split(' ') || [];
+      } while (new Set(phraseArray).size !== 12);
+
       if (wallet.mnemonic) {
         setMnemonic(wallet.mnemonic.phrase);
       }
@@ -34,8 +41,15 @@ export default function CreateWalletScreen({ navigation }: any) {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
         setIsBlurred(true);
-        // Regenerate on background to prevent returning to the same phrase
-        const newWallet = ethers.Wallet.createRandom();
+        // Regenerate on background to prevent returning to the same phrase.
+        // Ensure strictly 12 unique words.
+        let newWallet;
+        let phraseArray;
+        do {
+          newWallet = ethers.Wallet.createRandom();
+          phraseArray = newWallet.mnemonic?.phrase.split(' ') || [];
+        } while (new Set(phraseArray).size !== 12);
+
         if (newWallet.mnemonic) {
           setMnemonic(newWallet.mnemonic.phrase);
         }

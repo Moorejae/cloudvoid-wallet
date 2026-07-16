@@ -99,7 +99,14 @@ export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
     if (isCorrect) {
       const newSelectedWords = [...selectedWords, word];
       setSelectedWords(newSelectedWords);
-      setScrambledWords(scrambledWords.filter((w) => w !== word));
+
+      // Remove only the first instance of the word from the scrambled grid
+      const indexToRemove = scrambledWords.findIndex((w) => w === word);
+      if (indexToRemove !== -1) {
+        const newScrambled = [...scrambledWords];
+        newScrambled.splice(indexToRemove, 1);
+        setScrambledWords(newScrambled);
+      }
       
       if (newSelectedWords.length === correctSequence.length) {
         completeVerification(newSelectedWords);
