@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import { API_BASE_URL } from '../services/web3Api';
 import * as WebBrowser from 'expo-web-browser';
+import { getAddressForToken } from '../utils/walletHelper';
 
 const generateMockBurnerAddress = (symbol: string) => {
   const chars = '0123456789abcdef';
@@ -59,6 +60,8 @@ export default function TokenDetailScreen({ route, navigation }: any) {
 
   const primaryWallet = wallets.find(w => w.name === 'Main Wallet') || wallets[0];
   const primaryAddress = primaryWallet ? primaryWallet.address : '0x1a2b...3c4d';
+  const mnemonic = useWalletStore((state) => state.mnemonic);
+  const derivedAddress = getAddressForToken(mnemonic, token.symbol, primaryAddress);
 
   const addWallet = useWalletStore((state) => state.addWallet);
 
@@ -158,7 +161,7 @@ export default function TokenDetailScreen({ route, navigation }: any) {
         </View>
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <TouchableOpacity 
-            onPress={() => WebBrowser.openBrowserAsync(`https://buy.moonpay.com?currencyCode=${token.symbol}&walletAddress=${primaryAddress}`)} 
+            onPress={() => WebBrowser.openBrowserAsync(`https://buy.moonpay.com?currencyCode=${token.symbol}&walletAddress=${derivedAddress}`)} 
             style={styles.buyBtnHeader}
           >
             <Ionicons name="card-outline" size={18} color={CloudVoidTheme.colors.success} />
@@ -186,7 +189,7 @@ export default function TokenDetailScreen({ route, navigation }: any) {
             ${token.price.toLocaleString()}
           </Text>
           <Text style={[styles.inlinePriceChange, { color: isGain ? CloudVoidTheme.colors.success : CloudVoidTheme.colors.danger }]}>
-            {isGain ? '↗' : '↘'} {isGain ? '+' : ''}{token.change}%
+            {isGain ? '↗' : '↘'} {isGain ? '+' : ''}{(typeof token.change === 'number' ? token.change : parseFloat(token.change) || 0).toFixed(2)}%
           </Text>
         </View>
 

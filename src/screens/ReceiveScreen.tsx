@@ -4,20 +4,24 @@ import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import QRCode from 'react-native-qrcode-svg';
+import { getAddressForToken } from '../utils/walletHelper';
 
 export default function ReceiveScreen({ route, navigation }: any) {
   const token = route.params?.token || { symbol: 'USDT', name: 'Aptos USDT', price: 1.00, change: 0.0, icon: '💚', color: '#26a17b' };
+  const mnemonic = useWalletStore((state) => state.mnemonic);
   const userId = useWalletStore((state) => state.userId) || '0x2dff76d3614301dd6bc1600b3445d9ed2bbd6c812b0a2a96c5c5fadeabc06ace';
+  const address = getAddressForToken(mnemonic, token.symbol, userId);
 
   const handleCopy = async () => {
-    await Clipboard.setStringAsync(userId);
+    await Clipboard.setStringAsync(address);
     Alert.alert('Address Copied', 'Wallet address copied to clipboard successfully.');
   };
 
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `My CloudVoid wallet deposit address: ${userId}`
+        message: `My CloudVoid wallet deposit address: ${address}`
       });
     } catch (e) {
       console.error(e);
@@ -45,15 +49,13 @@ export default function ReceiveScreen({ route, navigation }: any) {
 
         {/* QR Code Container */}
         <View style={styles.qrCard}>
-          <View style={styles.qrBox}>
-            {/* Visual simulation of QR Code */}
-            <View style={styles.qrGrid}>
-              <View style={[styles.qrCorner, { top: 0, left: 0 }]} />
-              <View style={[styles.qrCorner, { top: 0, right: 0 }]} />
-              <View style={[styles.qrCorner, { bottom: 0, left: 0 }]} />
-              {/* Core pattern stubs */}
-              <View style={styles.qrPattern} />
-            </View>
+          <View style={{ padding: 16, backgroundColor: '#ffffff', borderRadius: 12, marginBottom: 16 }}>
+            <QRCode
+              value={address}
+              size={180}
+              color="#000000"
+              backgroundColor="#ffffff"
+            />
           </View>
           <Text style={styles.qrDesc}>Scan to deposit {token.symbol}</Text>
         </View>
@@ -61,7 +63,7 @@ export default function ReceiveScreen({ route, navigation }: any) {
         {/* Address Display */}
         <View style={styles.addressContainer}>
           <Text style={styles.addressTitle}>My Wallet Address</Text>
-          <Text style={styles.addressText}>{userId}</Text>
+          <Text style={styles.addressText}>{address}</Text>
         </View>
 
         {/* Action Toggles */}

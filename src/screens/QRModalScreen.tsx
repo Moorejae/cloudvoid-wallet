@@ -5,16 +5,19 @@ import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { getAddressForToken } from '../utils/walletHelper';
 
 export default function QRModalScreen({ route, navigation }: any) {
   const token = route.params?.token || { symbol: 'USDT', name: 'Aptos USDT', icon: '💚' };
   const initialMode = route.params?.mode || 'qr';
   
   const [mode, setMode] = useState<'qr' | 'scan'>(initialMode);
+  const mnemonic = useWalletStore((state) => state.mnemonic);
   const userId = useWalletStore((state) => state.userId) || '0x2dff76d3614301dd6bc1600b3445d9ed2bbd6c812b0a2a96c5c5fadeabc06ace';
+  const address = getAddressForToken(mnemonic, token.symbol, userId);
 
   const handleCopy = async () => {
-    await Clipboard.setStringAsync(userId);
+    await Clipboard.setStringAsync(address);
     Alert.alert('Copied', 'Address copied to clipboard!');
   };
 
@@ -61,7 +64,7 @@ export default function QRModalScreen({ route, navigation }: any) {
             <View style={styles.qrCard}>
               <View style={{ padding: 16, backgroundColor: '#ffffff', borderRadius: 12, marginBottom: 16 }}>
                 <QRCode
-                  value={userId}
+                  value={address}
                   size={180}
                   color="#000000"
                   backgroundColor="#ffffff"
@@ -71,7 +74,7 @@ export default function QRModalScreen({ route, navigation }: any) {
             </View>
 
             <View style={styles.addressBox}>
-              <Text style={styles.addressText} numberOfLines={1}>{userId}</Text>
+              <Text style={styles.addressText} numberOfLines={1}>{address}</Text>
               <TouchableOpacity onPress={handleCopy} style={styles.copyBtn}>
                 <Ionicons name="copy-outline" size={18} color={CloudVoidTheme.colors.accent} />
               </TouchableOpacity>
