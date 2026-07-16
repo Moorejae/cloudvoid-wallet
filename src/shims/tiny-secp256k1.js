@@ -6,6 +6,7 @@
 
 // Use the noble/curves secp256k1 which is pure JS
 const { secp256k1 } = require('@noble/curves/secp256k1');
+const { Buffer } = require('buffer');
 
 const CURVE_ORDER = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
 

@@ -6,6 +6,7 @@ import { ethers } from 'ethers';
 import * as bitcoin from 'bitcoinjs-lib';
 import { Keypair } from '@solana/web3.js';
 import TronWeb from 'tronweb';
+import { Buffer } from 'buffer';
 
 // Initialize BIP32
 const bip32 = BIP32Factory(ecc);
@@ -69,11 +70,6 @@ export function deriveWalletsFromSeed(mnemonic: string): DerivedWallet[] {
     });
   } catch (err) {
     console.error('Failed to derive Solana address:', err);
-    wallets.push({
-      network: 'Solana',
-      address: 'mock_solana_address_' + seed.subarray(0, 4).toString('hex'),
-      privateKey: 'mock_sol_priv'
-    });
   }
 
   // 4. Tron
@@ -91,11 +87,20 @@ export function deriveWalletsFromSeed(mnemonic: string): DerivedWallet[] {
     }
   } catch (err) {
     console.error('Failed to derive Tron address:', err);
+  }
+
+  // 5. Monero (XMR) Hashing Derivation
+  try {
+    const spendSecretHex = ethers.sha256(seed);
+    const spendSecretBytes = ethers.getBytes(spendSecretHex);
+    const xmrAddress = '4' + ethers.sha512(seed).slice(2, 96);
     wallets.push({
-      network: 'Tron',
-      address: 'Tmock_tron_address_' + seed.subarray(0, 4).toString('hex'),
-      privateKey: ''
+      network: 'Monero',
+      address: xmrAddress,
+      privateKey: spendSecretHex.substring(2)
     });
+  } catch (err) {
+    console.error('Failed to derive Monero address:', err);
   }
 
   return wallets;
