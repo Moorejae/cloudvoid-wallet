@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, AppState, Platform } from 'react-native';
 import { CloudVoidTheme } from '../theme/tokens';
-import { generateNewSeedPhrase } from '../services/wallet-engine';
+import { useFocusEffect } from '@react-navigation/native';
+import { ethers } from 'ethers';
+import 'react-native-get-random-values';
 import * as Clipboard from 'expo-clipboard';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as FileSystem from 'expo-file-system';
@@ -12,30 +14,44 @@ export default function CreateWalletScreen({ navigation }: any) {
   const [isBlurred, setIsBlurred] = useState(false);
   const [clipboardTimer, setClipboardTimer] = useState(0);
 
-  useEffect(() => {
-    try {
-      const generated = generateNewSeedPhrase();
-      setMnemonic(generated);
-    } catch (e) {
-      // Fallback if polyfills fail during testing
-      setMnemonic('apple orange banana grape mango cherry lemon lime peach pear plum kiwi');
-    }
+  useFocusEffect(
+    React.useCallback(() => {
+      // Regenerate mnemonic securely every time screen comes into focus
+      const wallet = ethers.Wallet.createRandom();
+      if (wallet.mnemonic) {
+        setMnemonic(wallet.mnemonic.phrase);
+      }
+      setIsBlurred(false);
 
-    // Prevent screenshot / screen recording
-    ScreenCapture.preventScreenCaptureAsync();
+      // Prevent screenshot / screen recording on native
+      if (Platform.OS !== 'web') {
+        try {
+          ScreenCapture.preventScreenCaptureAsync();
+        } catch (e) {}
+      }
 
-    // Blur seed phrase when app is backgrounded
+    // Blur seed phrase or wipe it when app is backgrounded
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
         setIsBlurred(true);
+        // Regenerate on background to prevent returning to the same phrase
+        const newWallet = ethers.Wallet.createRandom();
+        if (newWallet.mnemonic) {
+          setMnemonic(newWallet.mnemonic.phrase);
+        }
       }
     });
 
     return () => {
-      ScreenCapture.allowScreenCaptureAsync();
+      if (Platform.OS !== 'web') {
+        try {
+          ScreenCapture.allowScreenCaptureAsync();
+        } catch (e) {}
+      }
       subscription.remove();
     };
-  }, []);
+  }, [])
+  );
 
   // Countdown timer for clipboard wipe
   useEffect(() => {
@@ -143,7 +159,7 @@ export default function CreateWalletScreen({ navigation }: any) {
       <View style={styles.warningBanner}>
         <Text style={styles.warningTitle}>⚠️ Security Mandate</Text>
         <Text style={styles.warningBody}>
-          CloudVoid never stores your recovery phrase. Anyone with access to these 12 words can claim all your digital assets.
+          You are only shown this 12-key phrase once. Copy it and save it securely. No screenshots should be taken.
         </Text>
       </View>
 
