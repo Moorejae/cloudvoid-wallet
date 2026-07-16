@@ -370,52 +370,88 @@ function extractCurrencyLocal(text) {
   return match ? match[1].toUpperCase() : null;
 }
 
-// ──────── Prices Endpoint ────────
-app.get('/api/prices', async (req, res) => {
+// ──────── Prices Cache & Background Poller (100% Free Hybrid API) ────────
+let priceCache = {
+  'DOGE': { usd: 0.1542, usd_24h_change: 5.23 },
+  'PEPE': { usd: 0.00000852, usd_24h_change: -2.14 },
+  'WIF': { usd: 2.54, usd_24h_change: 12.45 },
+  'BONK': { usd: 0.00002135, usd_24h_change: -1.32 },
+  'SHIB': { usd: 0.00001785, usd_24h_change: 0.45 },
+  'FLOKI': { usd: 0.0001625, usd_24h_change: 8.76 },
+  'BTC': { usd: 64210.50, usd_24h_change: 1.25 },
+  'ETH': { usd: 3485.20, usd_24h_change: -0.52 },
+  'APT': { usd: 8.42, usd_24h_change: 2.41 },
+  'SOL': { usd: 145.80, usd_24h_change: 4.12 },
+  'BNB': { usd: 575.30, usd_24h_change: 0.85 },
+  'AVAX': { usd: 28.15, usd_24h_change: -1.15 }
+};
+
+async function refreshPriceCache() {
+  console.log("[Prices Poller] Refreshing price cache...");
+  
+  // 1. Fetch major coins from Binance (completely free, unlimited, no key)
   try {
-    const ids = 'dogecoin,pepe,wif,bonk,shiba-inu,floki,bitcoin,ethereum,aptos,solana,binancecoin,avalanche-2';
+    const symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "DOGEUSDT", "SHIBUSDT", "AVAXUSDT"];
+    const binancePromises = symbols.map(s => 
+      axios.get(`https://api.binance.com/api/v3/ticker/24hr?symbol=${s}`, { timeout: 4000 })
+    );
+    const results = await Promise.allSettled(binancePromises);
+    
+    const keyMap = {
+      "BTCUSDT": "BTC",
+      "ETHUSDT": "ETH",
+      "BNBUSDT": "BNB",
+      "SOLUSDT": "SOL",
+      "DOGEUSDT": "DOGE",
+      "SHIBUSDT": "SHIB",
+      "AVAXUSDT": "AVAX"
+    };
+
+    results.forEach((res, i) => {
+      if (res.status === "fulfilled") {
+        const d = res.value.data;
+        const key = keyMap[symbols[i]];
+        if (key) {
+          priceCache[key] = {
+            usd: parseFloat(d.lastPrice),
+            usd_24h_change: parseFloat(d.priceChangePercent)
+          };
+        }
+      }
+    });
+    console.log("[Prices Poller] Binance fetch completed successfully.");
+  } catch (err) {
+    console.error("[Prices Poller] Binance fetch error:", err.message);
+  }
+
+  // 2. Fetch minor/memecoins from CoinGecko Free Tier (Cached to avoid rate limits)
+  try {
+    const ids = 'pepe,wif,bonk,floki,aptos';
     const resp = await axios.get(`https://api.coingecko.com/api/v3/simple/price`, {
-      params: {
-        ids: ids,
-        vs_currencies: 'usd',
-        include_24hr_change: 'true'
-      },
+      params: { ids, vs_currencies: 'usd', include_24hr_change: 'true' },
       timeout: 5000
     });
     
-    const map = {
-      'DOGE': resp.data['dogecoin'],
-      'PEPE': resp.data['pepe'],
-      'WIF': resp.data['wif'],
-      'BONK': resp.data['bonk'],
-      'SHIB': resp.data['shiba-inu'],
-      'FLOKI': resp.data['floki'],
-      'BTC': resp.data['bitcoin'],
-      'ETH': resp.data['ethereum'],
-      'APT': resp.data['aptos'],
-      'SOL': resp.data['solana'],
-      'BNB': resp.data['binancecoin'],
-      'AVAX': resp.data['avalanche-2'],
-    };
-    return res.json(map);
+    const geckoData = resp.data;
+    if (geckoData.pepe) priceCache['PEPE'] = { usd: geckoData.pepe.usd, usd_24h_change: geckoData.pepe.usd_24h_change };
+    if (geckoData.wif) priceCache['WIF'] = { usd: geckoData.wif.usd, usd_24h_change: geckoData.wif.usd_24h_change };
+    if (geckoData.bonk) priceCache['BONK'] = { usd: geckoData.bonk.usd, usd_24h_change: geckoData.bonk.usd_24h_change };
+    if (geckoData.floki) priceCache['FLOKI'] = { usd: geckoData.floki.usd, usd_24h_change: geckoData.floki.usd_24h_change };
+    if (geckoData.aptos) priceCache['APT'] = { usd: geckoData.aptos.usd, usd_24h_change: geckoData.aptos.usd_24h_change };
+    
+    console.log("[Prices Poller] CoinGecko fetch completed successfully.");
   } catch (err) {
-    // Return a healthy fallback if CoinGecko rate limits
-    const fallback = {
-      'DOGE': { usd: 0.1542, usd_24h_change: 5.23 },
-      'PEPE': { usd: 0.00000852, usd_24h_change: -2.14 },
-      'WIF': { usd: 2.54, usd_24h_change: 12.45 },
-      'BONK': { usd: 0.00002135, usd_24h_change: -1.32 },
-      'SHIB': { usd: 0.00001785, usd_24h_change: 0.45 },
-      'FLOKI': { usd: 0.0001625, usd_24h_change: 8.76 },
-      'BTC': { usd: 64210.50, usd_24h_change: 1.25 },
-      'ETH': { usd: 3485.20, usd_24h_change: -0.52 },
-      'APT': { usd: 8.42, usd_24h_change: 2.41 },
-      'SOL': { usd: 145.80, usd_24h_change: 4.12 },
-      'BNB': { usd: 575.30, usd_24h_change: 0.85 },
-      'AVAX': { usd: 28.15, usd_24h_change: -1.15 }
-    };
-    return res.json(fallback);
+    console.error("[Prices Poller] CoinGecko fetch warning (using cache/fallback):", err.message);
   }
+}
+
+// Start polling every 5 minutes
+refreshPriceCache();
+setInterval(refreshPriceCache, 5 * 60 * 1000);
+
+// ──────── Prices Endpoint ────────
+app.get('/api/prices', async (req, res) => {
+  return res.json(priceCache);
 });
 
 // ──────── Wallet Endpoints ────────
@@ -488,12 +524,12 @@ app.get('/api/wallet/assets', checkAuth, async (req, res) => {
   const balances = await fetchRealBalances(addresses);
   
   const assets = [
-    { symbol: 'BTC', name: 'Bitcoin', balance: balances.BTC || 0, price: 64210.50, valueUSD: (balances.BTC || 0)*64210.50, change24h: 1.25, icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png' },
-    { symbol: 'ETH', name: 'Ethereum', balance: balances.ETH || 0, price: 3485.20, valueUSD: (balances.ETH || 0)*3485.20, change24h: -0.52, icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png' },
-    { symbol: 'BNB', name: 'BNB', balance: balances.BNB || 0, price: 575.30, valueUSD: (balances.BNB || 0)*575.30, change24h: 0.85, icon: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png' },
-    { symbol: 'SOL', name: 'Solana', balance: balances.SOL || 0, price: 145.80, valueUSD: (balances.SOL || 0)*145.80, change24h: 4.12, icon: 'https://cryptologos.cc/logos/solana-sol-logo.png' },
-    { symbol: 'TRX', name: 'Tron', balance: balances.TRX || 0, price: 0.12, valueUSD: (balances.TRX || 0)*0.12, change24h: 1.05, icon: 'https://cryptologos.cc/logos/tron-trx-logo.png' },
-    { symbol: 'XMR', name: 'Monero', balance: balances.XMR || 0, price: 167.00, valueUSD: (balances.XMR || 0)*167.00, change24h: 3.45, icon: 'https://cryptologos.cc/logos/monero-xmr-logo.png' }
+    { symbol: 'BTC', name: 'Bitcoin', balance: balances.BTC || 0, price: priceCache['BTC']?.usd || 64210.50, valueUSD: (balances.BTC || 0) * (priceCache['BTC']?.usd || 64210.50), change24h: priceCache['BTC']?.usd_24h_change || 1.25, icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png' },
+    { symbol: 'ETH', name: 'Ethereum', balance: balances.ETH || 0, price: priceCache['ETH']?.usd || 3485.20, valueUSD: (balances.ETH || 0) * (priceCache['ETH']?.usd || 3485.20), change24h: priceCache['ETH']?.usd_24h_change || -0.52, icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png' },
+    { symbol: 'BNB', name: 'BNB', balance: balances.BNB || 0, price: priceCache['BNB']?.usd || 575.30, valueUSD: (balances.BNB || 0) * (priceCache['BNB']?.usd || 575.30), change24h: priceCache['BNB']?.usd_24h_change || 0.85, icon: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png' },
+    { symbol: 'SOL', name: 'Solana', balance: balances.SOL || 0, price: priceCache['SOL']?.usd || 145.80, valueUSD: (balances.SOL || 0) * (priceCache['SOL']?.usd || 145.80), change24h: priceCache['SOL']?.usd_24h_change || 4.12, icon: 'https://cryptologos.cc/logos/solana-sol-logo.png' },
+    { symbol: 'TRX', name: 'Tron', balance: balances.TRX || 0, price: priceCache['TRX']?.usd || 0.12, valueUSD: (balances.TRX || 0) * (priceCache['TRX']?.usd || 0.12), change24h: priceCache['TRX']?.usd_24h_change || 1.05, icon: 'https://cryptologos.cc/logos/tron-trx-logo.png' },
+    { symbol: 'XMR', name: 'Monero', balance: balances.XMR || 0, price: priceCache['XMR']?.usd || 167.00, valueUSD: (balances.XMR || 0) * (priceCache['XMR']?.usd || 167.00), change24h: priceCache['XMR']?.usd_24h_change || 3.45, icon: 'https://cryptologos.cc/logos/monero-xmr-logo.png' }
   ];
 
   const totalValueUSD = assets.reduce((sum, a) => sum + a.valueUSD, 0);

@@ -102,11 +102,15 @@ export default function DashboardScreen({ navigation }: any) {
       }
     };
 
-    loadRealData();
-    interval = setInterval(loadRealData, 15000);
+    if (userId) {
+      loadRealData();
+      interval = setInterval(loadRealData, 10000);
+    }
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [userId]);
 
   const onRefresh = () => {
     setRefreshing(true);

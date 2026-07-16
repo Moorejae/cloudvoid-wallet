@@ -52,12 +52,18 @@ export default function AIBrain({ currentRouteName = 'Wallet' }: { currentRouteN
   const btnPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Only set pan responder if there is actual movement, allowing static taps to register instantly
+        return Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3;
+      },
       onPanResponderGrant: () => pan.extractOffset(),
       onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false }),
       onPanResponderRelease: (evt, gestureState) => {
         pan.flattenOffset();
-        if (Math.abs(gestureState.dx) < 5 && Math.abs(gestureState.dy) < 5) handleToggle();
+        // Wider tap detection window (15px) to handle click jitters on emulators and touch screens
+        if (Math.abs(gestureState.dx) < 15 && Math.abs(gestureState.dy) < 15) {
+          handleToggle();
+        }
       }
     })
   ).current;
