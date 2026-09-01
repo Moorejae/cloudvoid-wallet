@@ -73,7 +73,7 @@ export default function FundCardScreen({ navigation }: any) {
               <View style={styles.frostOverlay}>
                 <LinearGradient
                   colors={['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0.01)']}
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                 />
                 <View style={styles.frozenBadge}>
                   <Ionicons name="snow" size={22} color="#60a5fa" style={styles.glowingSnowflake} />
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   frostOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(15, 23, 42, 0.4)',
     borderRadius: 16,
     justifyContent: 'center',

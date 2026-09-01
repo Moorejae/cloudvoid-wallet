@@ -45,14 +45,16 @@ export default function ManageWalletsScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={24} color={CloudVoidTheme.colors.backBtn} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Manage Wallets</Text>
-        <View style={{ width: 80 }} />
+        <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('CreateWallet', { mode: 'add' })}>
+          <Ionicons name="add-circle-outline" size={20} color={CloudVoidTheme.colors.accent} />
+          <Text style={styles.addBtnText}>Add</Text>
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -123,6 +125,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 4,
     fontWeight: '500',
+  },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+  },
+  addBtnText: {
+    color: CloudVoidTheme.colors.accent,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   headerTitle: {
     color: CloudVoidTheme.colors.textHeader,

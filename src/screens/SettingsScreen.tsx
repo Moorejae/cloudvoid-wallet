@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Modal, Pressable, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Modal, Pressable, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useWalletStore } from '../stores/walletStore';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -7,7 +7,6 @@ import * as ScreenCapture from 'expo-screen-capture';
 import * as Linking from 'expo-linking';
 import { TRANSLATIONS } from '../utils/translations';
 import { CloudVoidTheme } from '../theme/tokens';
-import { checkForUpdates } from '../services/updates';
 
 export default function SettingsScreen({ navigation }: any) {
   const {
@@ -24,15 +23,7 @@ export default function SettingsScreen({ navigation }: any) {
     setIsVerified
   } = useWalletStore((state) => state);
 
-  // ── Platform differentiation ──
-  // The web build cannot use OS biometrics, screen-capture blocking, or OS
-  // SecureStore — the mobile (Expo APK) build can. We surface the right options
-  // per platform so users never see a dead switch.
   const isWeb = Platform.OS === 'web';
-  const platformLabel = isWeb ? 'Web App' : 'Mobile App (APK)';
-  const platformCaption = isWeb
-    ? 'Browser vault + password encryption'
-    : 'OS biometrics + SecureStore encryption';
 
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
   const [biometricError, setBiometricError] = useState<string | null>(null);
@@ -50,34 +41,6 @@ export default function SettingsScreen({ navigation }: any) {
   };
 
   // Check GitHub for a newer APK build (auto-updated on every push)
-  const [checkingUpdates, setCheckingUpdates] = useState(false);
-  const handleCheckUpdates = async () => {
-    if (checkingUpdates) return;
-    setCheckingUpdates(true);
-    const info = await checkForUpdates();
-    setCheckingUpdates(false);
-
-    if (isWeb) {
-      Alert.alert('Check for Updates', 'This is the web build — the APK auto-updates from GitHub. Latest build: ' + (info.latestVersion || 'unknown'));
-      return;
-    }
-
-    if (info.updateAvailable && info.releaseUrl) {
-      Alert.alert(
-        'Update Available',
-        `You're on build ${info.currentVersionCode}. A newer build (${info.latestVersion}) is ready.\n\n${info.releaseNotes ? info.releaseNotes.split('\n')[0] : ''}`,
-        [
-          { text: 'Later', style: 'cancel' },
-          { text: 'Download', onPress: () => Linking.openURL(info.releaseUrl || '') },
-        ]
-      );
-    } else if (info.latestVersion) {
-      Alert.alert('You\u2019re up to date', `You're on the latest build (${info.latestVersion}).`);
-    } else {
-      Alert.alert('Check Failed', 'Could not reach GitHub. Check your connection and try again.');
-    }
-  };
-
   const t = (Platform.OS === 'web' && selectedLanguage !== 'English')
     ? TRANSLATIONS.English 
     : (TRANSLATIONS[selectedLanguage] || TRANSLATIONS.English);
@@ -117,21 +80,6 @@ export default function SettingsScreen({ navigation }: any) {
     // AppNavigator will automatically bounce user to Welcome if wallet goes uninitialized
   };
 
-  const handleVerification = () => {
-    if (isVerified) {
-      Alert.alert('Verified', 'Your account is already verified.');
-    } else {
-      Alert.alert(
-        'Account Verification',
-        'Verify your account to access FiatHub services.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Verify Now', onPress: () => setIsVerified(true) }
-        ]
-      );
-    }
-  };
-
   const closeSheet = () => setActiveSheet(null);
 
   const renderItem = (icon: any, title: string, subtitle: string, sheetName: string, isDestructive = false) => (
@@ -140,10 +88,6 @@ export default function SettingsScreen({ navigation }: any) {
       onPress={() => {
         if (sheetName === 'Logout') {
           handleLogout();
-        } else if (sheetName === 'Verification') {
-          handleVerification();
-        } else if (sheetName === 'Updates') {
-          handleCheckUpdates();
         } else {
           setActiveSheet(sheetName);
         }
@@ -182,25 +126,6 @@ export default function SettingsScreen({ navigation }: any) {
       )}
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {renderItem(
-          isVerified ? 'checkmark-circle' : 'alert-circle-outline', 
-          'Account Verification', 
-          isVerified ? 'Verified Account' : 'Verify ID for FiatHub', 
-          'Verification',
-          false
-        )}
-        {renderItem(
-          isWeb ? 'globe-outline' : 'phone-portrait-outline',
-          'Platform',
-          platformCaption,
-          'Platform'
-        )}
-        {renderItem(
-          'cloud-download-outline',
-          checkingUpdates ? 'Checking for updates…' : 'Check for Updates',
-          'Fetches the latest APK from GitHub',
-          'Updates'
-        )}
         {renderItem('shield-checkmark-outline', t.security, t.securitySub, 'Security')}
         {renderItem('notifications-outline', t.notifications, t.notificationsSub, 'Notification')}
         {renderItem('git-network-outline', t.network, t.networkSub, 'Network')}
@@ -267,7 +192,7 @@ export default function SettingsScreen({ navigation }: any) {
                         <Ionicons name="scan-outline" size={24} color="rgba(255,255,255,0.25)" style={{marginRight: 12}} />
                         <View style={{ flex: 1 }}>
                           <Text style={[styles.actionSheetItemTitle, { opacity: 0.5 }]}>Biometric Unlock</Text>
-                          <Text style={styles.actionSheetItemSub}>Only available in the mobile app (APK)</Text>
+                          <Text style={styles.actionSheetItemSub}>Not available in this browser build</Text>
                         </View>
                       </View>
                       <Ionicons name="lock-closed" size={18} color="rgba(255,255,255,0.3)" />
@@ -288,38 +213,6 @@ export default function SettingsScreen({ navigation }: any) {
                     <Text style={styles.actionSheetItemTitle}>2FA Setup</Text>
                   </View>
                 </TouchableOpacity>
-              </View>
-
-              <TouchableOpacity style={styles.actionSheetCancel} onPress={closeSheet}>
-                <Text style={styles.actionSheetCancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </Pressable>
-          ) : activeSheet === 'Platform' ? (
-            <Pressable style={styles.actionSheetContainer}>
-              <View style={styles.actionSheetContent}>
-                <View style={styles.actionSheetHandle} />
-                <Text style={styles.actionSheetTitle}>Platform: {platformLabel}</Text>
-                <Text style={styles.actionSheetCaption}>
-                  CloudVoid ships as both a web app and a mobile APK. Features differ by platform.
-                </Text>
-
-                <View style={styles.platformRow}>
-                  <Ionicons name="globe-outline" size={20} color="#8b5cf6" />
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={styles.actionSheetItemTitle}>Web App</Text>
-                    <Text style={styles.actionSheetItemSub}>Vault password (PBKDF2 + AES-256-GCM) · No OS biometrics · No screenshot block</Text>
-                  </View>
-                </View>
-
-                <View style={styles.actionSheetDivider} />
-
-                <View style={styles.platformRow}>
-                  <Ionicons name="phone-portrait-outline" size={20} color="#8b5cf6" />
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={styles.actionSheetItemTitle}>Mobile App (APK)</Text>
-                    <Text style={styles.actionSheetItemSub}>OS biometric unlock · SecureStore key storage · Screen-capture blocking</Text>
-                  </View>
-                </View>
               </View>
 
               <TouchableOpacity style={styles.actionSheetCancel} onPress={closeSheet}>
@@ -766,11 +659,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 10,
     lineHeight: 18,
-  },
-  platformRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
   },
   actionSheetDivider: {
     height: 1,

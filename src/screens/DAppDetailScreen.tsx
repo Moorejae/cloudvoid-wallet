@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { fetchDAppDetail, DApp } from '../services/web3Api';
-import { useWalletConnectStore } from '../stores/walletConnectStore';
+import { ALL_DAPPS } from './ExploreDAppsScreen';
 
 export default function DAppDetailScreen() {
   const [dapp, setDapp] = useState<DApp | null>(null);
@@ -14,12 +14,27 @@ export default function DAppDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { appId } = route.params;
-  
-  const pair = useWalletConnectStore(state => state.pair);
+
 
   useEffect(() => {
     const loadData = async () => {
-      const data = await fetchDAppDetail(appId);
+      let data = await fetchDAppDetail(appId);
+      if (!data) {
+        // Fall back to the bundled local dApp list (names are used as ids).
+        const local = ALL_DAPPS.find((d) => d.name.toLowerCase() === String(appId || '').toLowerCase());
+        if (local) {
+          data = {
+            id: local.name,
+            name: local.name,
+            category: local.category,
+            icon: local.icon,
+            description: local.desc,
+            wcIdentifier: local.name,
+            url: '',
+            chains: [local.category],
+          };
+        }
+      }
       setDapp(data);
       setLoading(false);
     };
@@ -27,26 +42,10 @@ export default function DAppDetailScreen() {
   }, [appId]);
 
   const handleConnect = async () => {
-    if (!dapp) return;
-    setConnecting(true);
-    
-    // Simulate WC pairing with this specific dApp
-    try {
-      await new Promise(res => setTimeout(res, 1500)); // Simulate delay
-      const mockUri = `wc:${Math.random().toString(36).substring(7)}@2?relay-protocol=irn&symKey=${Math.random().toString(36).substring(7)}`;
-      const success = await pair(mockUri);
-      
-      if (success) {
-        Alert.alert('Connected', `Successfully connected to ${dapp.name}`);
-        navigation.goBack();
-      } else {
-        Alert.alert('Connection Failed', 'Could not establish connection with ' + dapp.name);
-      }
-    } catch (err) {
-      Alert.alert('Error', 'An error occurred during connection.');
-    } finally {
-      setConnecting(false);
-    }
+    Alert.alert(
+      'Local self-custody mode',
+      'This wallet is self-custody and does not pair dApps via WalletConnect. Your keys never leave this device.'
+    );
   };
 
   if (loading) {

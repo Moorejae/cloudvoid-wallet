@@ -31,11 +31,11 @@ export default function HistoryScreen() {
   const selectedStatus = activeTxFilter;
   const theme = useWalletStore((state) => state.theme);
 
-  const headerCardColors = theme === 'light'
+  const headerCardColors: [string, string, string] = theme === 'light'
     ? ['#ffffff', '#f3f4f6', '#e5e7eb']
     : ['rgba(30, 30, 40, 1)', 'rgba(40, 30, 60, 1)', 'rgba(60, 40, 100, 1)'];
 
-  const filterOptions = [
+  const filterOptions: Array<{ id: 'All' | 'Receive' | 'Send' | 'Market'; label: string; icon: any; color: string }> = [
     { id: 'All', label: 'All Transactions', icon: 'list', color: '#a78bfa' },
     { id: 'Receive', label: 'Deposits / Receive', icon: 'arrow-down', color: '#22c55e' },
     { id: 'Send', label: 'Withdraws / Send', icon: 'arrow-up', color: '#ef4444' },
@@ -263,7 +263,7 @@ export default function HistoryScreen() {
                 <TouchableOpacity 
                   key={option.id} 
                   style={styles.filterOptionRow}
-                  onPress={() => setSelectedStatus(option.id)}
+                  onPress={() => setSelectedStatus(option.id as 'All' | 'Receive' | 'Send' | 'Market')}
                 >
                   <View style={styles.radioCircle}>
                     {selectedStatus === option.id && <View style={styles.radioInner} />}

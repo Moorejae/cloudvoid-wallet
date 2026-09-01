@@ -36,6 +36,29 @@ export default function FiatHubScreen({ navigation }: any) {
     Alert.alert('Ecosystem Expansion In Progress', 'Join the Waitlist to lock early zero-fee conversion rates. Coming Soon!');
   };
 
+  const unverifiedContainer = {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+  } as const;
+
+  const verifyBtn = {
+    marginTop: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: CloudVoidTheme.colors.btnBg,
+  } as const;
+
+  const verifyBtnText = {
+    color: CloudVoidTheme.colors.btnText,
+    fontWeight: '700',
+  } as const;
+
   const checkBurnerRestriction = (action: () => void) => {
     if (isBurner) {
       Alert.alert('Security Restricted', 'Burner addresses are not permitted for direct P2P trading.');
@@ -44,7 +67,7 @@ export default function FiatHubScreen({ navigation }: any) {
     }
   };
 
-  const balanceCardColors = theme === 'light'
+  const balanceCardColors: [string, string, string] = theme === 'light'
     ? ['#ffffff', '#f3f4f6', '#e5e7eb']
     : ['rgba(25, 25, 35, 1)', 'rgba(35, 35, 50, 1)', 'rgba(25, 25, 45, 1)'];
 
@@ -126,21 +149,7 @@ export default function FiatHubScreen({ navigation }: any) {
         scrollEnabled={activeMode === 'fiat'} // Disable scroll when P2P overlay is active
       >
         <View style={[styles.fiatView, activeMode === 'p2p' && { opacity: 0.3 }]} pointerEvents={activeMode === 'p2p' ? 'none' : 'auto'}>
-          {!isVerified && activeMode === 'fiat' ? (
-            <View style={styles.unverifiedContainer}>
-              <Ionicons name="lock-closed" size={64} color={CloudVoidTheme.colors.textPrimary} style={{ marginBottom: 20 }} />
-              <Text style={styles.unverifiedTitle}>Verification Required</Text>
-              <Text style={styles.unverifiedSub}>You must verify your account to access FiatHub services.</Text>
-              <TouchableOpacity 
-                style={styles.verifyBtn}
-                onPress={() => navigation.navigate('Settings')}
-              >
-                <Text style={styles.verifyBtnText}>Go to Settings</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <>
-              {/* Total Balance Card */}
+          {/* Total Balance Card */}
           <LinearGradient
             colors={balanceCardColors}
             start={{ x: 0, y: 0 }}
@@ -263,8 +272,6 @@ export default function FiatHubScreen({ navigation }: any) {
               </View>
             </View>
           </View>
-            </>
-          )}
         </View>
       </ScrollView>
 
@@ -409,6 +416,30 @@ const styles = StyleSheet.create({
   totalBalanceSub: {
     color: CloudVoidTheme.colors.textSecondary,
     fontSize: 12,
+  },
+  unverifiedTitle: {
+    color: CloudVoidTheme.colors.textPrimary,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  unverifiedSub: {
+    color: CloudVoidTheme.colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  verifyBtn: {
+    marginTop: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: CloudVoidTheme.colors.btnBg,
+  },
+  verifyBtnText: {
+    color: CloudVoidTheme.colors.btnText,
+    fontSize: 14,
+    fontWeight: '700',
   },
 
   // Sections
@@ -575,7 +606,7 @@ const styles = StyleSheet.create({
 
   // P2P Overlay Styles
   p2pOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'flex-end',
     paddingBottom: 0,
   },

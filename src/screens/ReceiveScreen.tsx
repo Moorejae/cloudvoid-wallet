@@ -4,6 +4,7 @@ import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import QRCode from '../components/QRCode';
 
 export default function ReceiveScreen({ route, navigation }: any) {
   const token = route.params?.token || { symbol: 'USDT', name: 'Aptos USDT', price: 1.00, change: 0.0, icon: '💚', color: '#26a17b' };
@@ -46,14 +47,7 @@ export default function ReceiveScreen({ route, navigation }: any) {
         {/* QR Code Container */}
         <View style={styles.qrCard}>
           <View style={styles.qrBox}>
-            {/* Visual simulation of QR Code */}
-            <View style={styles.qrGrid}>
-              <View style={[styles.qrCorner, { top: 0, left: 0 }]} />
-              <View style={[styles.qrCorner, { top: 0, right: 0 }]} />
-              <View style={[styles.qrCorner, { bottom: 0, left: 0 }]} />
-              {/* Core pattern stubs */}
-              <View style={styles.qrPattern} />
-            </View>
+            <QRCode value={userId} size={200} />
           </View>
           <Text style={styles.qrDesc}>Scan to deposit {token.symbol}</Text>
         </View>
@@ -139,7 +133,7 @@ const styles = StyleSheet.create({
   qrBox: {
     width: 200,
     height: 200,
-    backgroundcolor: CloudVoidTheme.colors.textPrimary,
+    backgroundColor: CloudVoidTheme.colors.textPrimary,
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -158,7 +152,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderWidth: 6,
     borderColor: '#000000',
-    backgroundcolor: CloudVoidTheme.colors.textPrimary,
+    backgroundColor: CloudVoidTheme.colors.textPrimary,
   },
   qrPattern: {
     width: 80,

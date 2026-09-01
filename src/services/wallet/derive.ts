@@ -220,3 +220,47 @@ export function deriveWalletsFromSeed(mnemonic: string): DerivedWallet[] {
     .filter((c) => c.address)
     .map((c) => ({ network: c.id, address: c.address, privateKey: '' }));
 }
+
+/**
+ * Generate a REAL, valid one-time ("burner") address for a given network.
+ *
+ * This is intentionally a fresh throwaway address (never derived from the user's
+ * master seed, so it cannot compromise the main wallet). The returned string is
+ * always a correct address for the target chain:
+ *   EVM (eth/poly/bnb/opbnb/avax/mnt/plasma)  -> 0x...
+ *   BTC (btc)                                 -> bc1q... (native segwit)
+ *   SOL (sol)                                 -> base58 ed25519 pubkey
+ *   TRX (trx)                                 -> T...   (base58check 0x41)
+ *   XLM (xlm)                                 -> G...   (StrKey)
+ */
+export function generateBurnerAddress(symbol: string): string {
+  const kind = (symbol || '').toUpperCase();
+  const EVM_KINDS = ['ETH', 'POLY', 'BNB', 'OPBNB', 'AVAX', 'MNT', 'PLASMA', 'ERC20', 'ERC-20', 'APT'];
+  if (EVM_KINDS.includes(kind)) {
+    return ethers.Wallet.createRandom().address;
+  }
+  if (kind === 'BTC') {
+    const node = HDKey.fromMasterSeed(ethers.randomBytes(32));
+    return p2wpkhAddress(node.publicKey!, 'bc');
+  }
+  if (kind === 'LTC') {
+    const node = HDKey.fromMasterSeed(ethers.randomBytes(32));
+    return p2wpkhAddress(node.publicKey!, 'ltc');
+  }
+  if (kind === 'SOL') {
+    return base58.encode(ed25519.getPublicKey(ethers.randomBytes(32)));
+  }
+  if (kind === 'TRX' || kind === 'TRON') {
+    const w = ethers.Wallet.createRandom();
+    let pub = w.signingKey.publicKey.slice(2);
+    if (pub.length === 128) pub = '04' + pub;
+    const hash = ethers.keccak256('0x' + pub);
+    const addr20 = hexToBytes(hash.slice(26));
+    return b58check.encode(new Uint8Array([0x41, ...addr20]));
+  }
+  if (kind === 'XLM') {
+    return toStellarAddress(ed25519.getPublicKey(ethers.randomBytes(32)));
+  }
+  // Default: EVM-compatible address.
+  return ethers.Wallet.createRandom().address;
+}

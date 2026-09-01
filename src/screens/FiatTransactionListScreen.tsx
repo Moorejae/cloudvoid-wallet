@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   filterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundcolor: CloudVoidTheme.colors.textPrimary,
+    backgroundColor: CloudVoidTheme.colors.textPrimary,
     borderWidth: 1,
     borderColor: '#d8b4fe',
     paddingHorizontal: 12,
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   mcCircle: { width: 30, height: 30, borderRadius: 15, position: 'absolute' },
   
   listCard: {
-    backgroundcolor: CloudVoidTheme.colors.textPrimary,
+    backgroundColor: CloudVoidTheme.colors.textPrimary,
     width: '100%',
     borderRadius: 20,
     padding: 20,
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 12,
     marginBottom: 4,
-    backgroundcolor: CloudVoidTheme.colors.textPrimary, // White card inside the warm modal
+    backgroundColor: CloudVoidTheme.colors.textPrimary,
   },
   filterOptionSelected: {
     // maybe slight purple tint or nothing

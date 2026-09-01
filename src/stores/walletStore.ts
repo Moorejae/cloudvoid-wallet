@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import { saveMnemonic, deleteMnemonic, getPersistedPrimaryAddress, getPersistedAddresses } from '../services/wallet/storage';
+import { saveMnemonic, deleteMnemonic, getPersistedPrimaryAddress, getPersistedAddresses, saveWalletList, getPersistedWalletList, loadWalletList, saveExtraWallet, deleteExtraWallet, clearAllExtraWallets, WalletListEntry } from '../services/wallet/storage';
 
 export interface Transaction {
   id: string;
@@ -83,6 +83,7 @@ interface WalletState {
   addTransaction: (tx: Transaction) => void;
   addCustomRPC: (rpc: CustomRPC) => void;
   addToken: (token: TokenItem) => void;
+  setTokens: (tokens: TokenItem[]) => void;
   removeToken: (symbol: string) => void;
   deleteWallet: (id: string) => void;
   resetForNewWallet: () => void;
@@ -94,6 +95,8 @@ interface WalletState {
   setActiveTxDateFilter: (date: string | null) => void;
   setActiveTxHashQuery: (hash: string | null) => void;
   addWallet: (wallet: WalletAccount) => void;
+  addExtraWallet: (name: string, mnemonic: string, addresses: Record<string, string>, password?: string) => Promise<void>;
+  hydrateWallets: () => Promise<void>;
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
@@ -128,17 +131,26 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   },
   wallets: (() => {
     const addrs = getPersistedAddresses();
-    return addrs && addrs.eth
+    const primary: WalletAccount[] = addrs && addrs.eth
       ? [{ id: '1', name: 'Main Wallet', address: addrs.eth, status: 'Active' }]
       : [];
+    const list = getPersistedWalletList() || [];
+    const merged = [...primary];
+    for (const w of list) {
+      if (!merged.some((m) => m.id === w.id)) {
+        merged.push({ id: w.id, name: w.name, address: w.address, status: w.status });
+      }
+    }
+    return merged;
   })(),
   customRPCs: [],
   tokens: [
-    { symbol: 'BTC', name: 'Bitcoin', price: 30121.75, change: 0.12, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', sparklineData: [40, 45, 42, 50, 48, 55, 60] },
-    { symbol: 'ETH', name: 'Ethereum', price: 121.73, change: -0.56, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [60, 55, 58, 45, 48, 40, 35] },
-    { symbol: 'BNB', name: 'BNB', price: 38.88, change: -0.03, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png', sparklineData: [45, 48, 42, 40, 38, 42, 38] },
-    { symbol: 'XMR', name: 'Monero', price: 107.23, change: 3.45, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/monero/info/logo.png', sparklineData: [20, 25, 30, 40, 50, 55, 60] },
-    { symbol: 'USDT', name: 'Tether', price: 100.00, change: -3.08, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [50, 52, 48, 49, 45, 42, 40] },
+    { symbol: 'BTC', name: 'Bitcoin', price: 64210.50, change: 1.25, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', sparklineData: [48, 52, 51, 56, 60, 63, 68] },
+    { symbol: 'ETH', name: 'Ethereum', price: 3485.20, change: -0.52, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [58, 61, 60, 66, 69, 71, 74] },
+    { symbol: 'SOL', name: 'Solana', price: 145.80, change: 4.12, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png', sparklineData: [38, 42, 45, 44, 47, 52, 58] },
+    { symbol: 'XMR', name: 'Monero', price: 167.00, change: 3.45, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/monero/info/logo.png', sparklineData: [32, 36, 39, 42, 40, 44, 48] },
+    { symbol: 'USDT', name: 'Tether', price: 1.00, change: 0.02, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [50, 50, 50, 50, 50, 51, 51] },
+    { symbol: 'DOGE', name: 'Dogecoin', price: 0.1542, change: 5.23, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/dogecoin/info/logo.png', sparklineData: [40, 42, 44, 45, 47, 48, 50] },
   ],
   transactions: [],
 
@@ -197,26 +209,37 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     tokens: [...state.tokens, token]
   })),
 
+  setTokens: (tokens) => set({ tokens }),
+
   removeToken: (symbol) => set((state) => ({
     tokens: state.tokens.filter((t) => t.symbol !== symbol)
   })),
 
-  deleteWallet: (id) => set((state) => {
+  deleteWallet: (id) => {
+    const state = get();
     const updatedWallets = state.wallets.filter((w) => w.id !== id);
-    
+
+    // Extra wallets carry their own seed record — remove it (never touches the
+    // primary seed). Then persist the updated wallet list.
+    if (id !== '1') {
+      deleteExtraWallet(id).catch(() => {});
+    }
+    saveWalletList(updatedWallets).catch(() => {});
+
     // If the active wallet is deleted, we also reset the balance/transactions
     // This connects it to the dashboard screen as requested
     if (id === '1' || updatedWallets.length === 0) {
-      return {
+      set({
         wallets: updatedWallets,
         balances: {
           BTC: 0, ETH: 0, BNB: 0, CELO: 0, USDT: 0, SOL: 0, TRX: 0, TON: 0, XMR: 0, MATIC: 0
         },
         transactions: []
-      };
+      });
+    } else {
+      set({ wallets: updatedWallets });
     }
-    return { wallets: updatedWallets };
-  }),
+  },
   
   resetForNewWallet: () => set({
     balances: {
@@ -227,6 +250,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   
   wipeWallet: async () => {
     await deleteMnemonic();
+    await clearAllExtraWallets();
+    await saveWalletList([]);
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.removeItem('cloudvoid_addresses');
       window.localStorage.removeItem('cloudvoid_userId');
@@ -253,12 +278,14 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       transactions: [],
       customRPCs: [],
       tokens: [
-        { symbol: 'BTC', name: 'Bitcoin', price: 30121.75, change: 0.12, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', sparklineData: [40, 45, 42, 50, 48, 55, 60] },
-        { symbol: 'ETH', name: 'Ethereum', price: 121.73, change: -0.56, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [60, 55, 58, 45, 48, 40, 35] },
-        { symbol: 'BNB', name: 'BNB', price: 38.88, change: -0.03, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png', sparklineData: [45, 48, 42, 40, 38, 42, 38] },
-        { symbol: 'XMR', name: 'Monero', price: 107.23, change: 3.45, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/monero/info/logo.png', sparklineData: [20, 25, 30, 40, 50, 55, 60] },
-        { symbol: 'USDT', name: 'Tether', price: 100.00, change: -3.08, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [50, 52, 48, 49, 45, 42, 40] },
+        { symbol: 'BTC', name: 'Bitcoin', price: 64210.50, change: 1.25, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', sparklineData: [48, 52, 51, 56, 60, 63, 68] },
+        { symbol: 'ETH', name: 'Ethereum', price: 3485.20, change: -0.52, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [58, 61, 60, 66, 69, 71, 74] },
+        { symbol: 'SOL', name: 'Solana', price: 145.80, change: 4.12, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png', sparklineData: [38, 42, 45, 44, 47, 52, 58] },
+        { symbol: 'XMR', name: 'Monero', price: 167.00, change: 3.45, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/monero/info/logo.png', sparklineData: [32, 36, 39, 42, 40, 44, 48] },
+        { symbol: 'USDT', name: 'Tether', price: 1.00, change: 0.02, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [50, 50, 50, 50, 50, 51, 51] },
+        { symbol: 'DOGE', name: 'Dogecoin', price: 0.1542, change: 5.23, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/dogecoin/info/logo.png', sparklineData: [40, 42, 44, 45, 47, 48, 50] },
       ],
+      wallets: [],
       theme: 'dark',
     });
   },
@@ -277,5 +304,33 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     // Since we are removing mock data, we just initialize to 0.
     const newBalances = { BTC: 0, ETH: 0, BNB: 0, CELO: 0, USDT: 0, SOL: 0, TRX: 0, TON: 0, XMR: 0, MATIC: 0 };
     set({ activeWalletId: id, balances: newBalances });
-  }
+  },
+
+  // "Add New Wallet" — creates an additional, independent wallet with its own
+  // seed. It is added to the wallet list and made active WITHOUT overwriting
+  // the primary wallet's seed or resetting the session.
+  addExtraWallet: async (name, mnemonic, addresses, password) => {
+    const state = get();
+    const nextId = `w${state.wallets.length + 1}`;
+    const primaryEth = addresses.eth || '';
+    await saveExtraWallet({ id: nextId, name, mnemonic, addresses, primaryEth }, password);
+    const entry: WalletAccount = { id: nextId, name, address: primaryEth, status: 'Active' };
+    const nextWallets = [...state.wallets, entry];
+    await saveWalletList(nextWallets);
+    set({ wallets: nextWallets, activeWalletId: nextId });
+  },
+
+  // Restores additional wallets persisted in SecureStore on native builds.
+  hydrateWallets: async () => {
+    const list = await loadWalletList();
+    if (!list || list.length === 0) return;
+    const state = get();
+    const merged = [...state.wallets];
+    for (const w of list) {
+      if (!merged.some((m) => m.id === w.id)) {
+        merged.push({ id: w.id, name: w.name, address: w.address, status: w.status });
+      }
+    }
+    set({ wallets: merged });
+  },
 }));

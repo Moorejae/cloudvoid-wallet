@@ -1,32 +1,128 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import QRCode from '../components/QRCode';
+import jsQR from 'jsqr';
 
 export default function QRModalScreen({ route, navigation }: any) {
   const token = route.params?.token || { symbol: 'USDT', name: 'Aptos USDT', icon: '💚' };
   const initialMode = route.params?.mode || 'qr';
-  
+
   const [mode, setMode] = useState<'qr' | 'scan'>(initialMode);
+  const [manualAddress, setManualAddress] = useState('');
+  const [scanStatus, setScanStatus] = useState('Ready to scan');
+  const [isScanning, setIsScanning] = useState(false);
+  const videoRef = useRef<any>(null);
+  const streamRef = useRef<any>(null);
   const userId = useWalletStore((state) => state.userId) || '0x2dff76d3614301dd6bc1600b3445d9ed2bbd6c812b0a2a96c5c5fadeabc06ace';
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track: any) => track.stop());
+      streamRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(userId);
     Alert.alert('Copied', 'Address copied to clipboard!');
   };
 
-  const handleMockScanSuccess = () => {
-    const mockScannedAddress = '0x' + Math.random().toString(16).substring(2, 18) + Math.random().toString(16).substring(2, 18);
-    Alert.alert('QR Scanned', `Scanned Address: ${mockScannedAddress}`);
-    // Navigate to send screen pre-filled
-    navigation.replace('Send', { token, address: mockScannedAddress });
+  const handleUseScannedAddress = (scanned: string) => {
+    const candidate = scanned.trim();
+    if (!candidate) {
+      Alert.alert('Scan failed', 'No wallet address was detected in the QR code.');
+      return;
+    }
+
+    setManualAddress(candidate);
+    setScanStatus(`Detected ${candidate.slice(0, 12)}...`);
+    Alert.alert('Wallet address detected', `Detected: ${candidate}`);
+    stopCamera();
+  };
+
+  const scanFrameWithJsqr = (video: HTMLVideoElement): string | null => {
+    if (typeof document === 'undefined') return null;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return null;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const result = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+      return result?.data || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const startWebScan = async () => {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setScanStatus('Web camera is unavailable on this browser. Paste a wallet address manually.');
+      return;
+    }
+
+    setIsScanning(true);
+    setScanStatus('Opening camera…');
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      // Chrome/Edge have a native BarcodeDetector; every other browser uses jsQR.
+      const detector = (window as any).BarcodeDetector || (window as any).barcodeDetector;
+      const useJsqr = !detector;
+
+      let attempts = 0;
+      const interval = setInterval(async () => {
+        attempts += 1;
+        if (attempts > 140 || !videoRef.current) {
+          clearInterval(interval);
+          setIsScanning(false);
+          setScanStatus('No QR code found. Paste a wallet address manually.');
+          return;
+        }
+
+        try {
+          let raw = '';
+          if (useJsqr) {
+            raw = scanFrameWithJsqr(videoRef.current) || '';
+          } else {
+            const barcodes = await detector.detect(videoRef.current);
+            raw = barcodes && barcodes.length > 0 ? (barcodes[0].rawValue || barcodes[0].value || '') : '';
+          }
+          if (raw) {
+            clearInterval(interval);
+            setIsScanning(false);
+            handleUseScannedAddress(raw);
+          }
+        } catch {
+          // Ignore transient detection failures and retry.
+        }
+      }, 350);
+    } catch (err) {
+      setIsScanning(false);
+      setScanStatus('Camera access blocked. Paste a wallet address manually instead.');
+      console.warn('QR camera error:', err);
+    }
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
           <Ionicons name="close-outline" size={24} color={CloudVoidTheme.colors.backBtn} />
@@ -37,15 +133,14 @@ export default function QRModalScreen({ route, navigation }: any) {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Mode Toggle Switch */}
       <View style={styles.toggleRow}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.toggleBtn, mode === 'qr' ? styles.activeToggle : null]}
           onPress={() => setMode('qr')}
         >
           <Text style={[styles.toggleText, mode === 'qr' ? styles.activeText : null]}>My Code</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.toggleBtn, mode === 'scan' ? styles.activeToggle : null]}
           onPress={() => setMode('scan')}
         >
@@ -55,17 +150,9 @@ export default function QRModalScreen({ route, navigation }: any) {
 
       <View style={styles.content}>
         {mode === 'qr' ? (
-          /* DISPLAY QR CODE MODE */
           <View style={styles.qrWrapper}>
             <View style={styles.qrCard}>
-              <View style={styles.qrPlaceholder}>
-                <View style={styles.qrGrid}>
-                  <View style={[styles.qrCorner, { top: 0, left: 0 }]} />
-                  <View style={[styles.qrCorner, { top: 0, right: 0 }]} />
-                  <View style={[styles.qrCorner, { bottom: 0, left: 0 }]} />
-                  <View style={styles.qrCore} />
-                </View>
-              </View>
+              <QRCode value={userId} size={190} />
               <Text style={styles.tokenMeta}>{token.icon} {token.symbol}</Text>
             </View>
 
@@ -77,16 +164,45 @@ export default function QRModalScreen({ route, navigation }: any) {
             </View>
           </View>
         ) : (
-          /* SCAN QR CODE MODE */
           <View style={styles.scanWrapper}>
             <View style={styles.scannerFrame}>
               <View style={styles.scannerBox}>
+                <video ref={videoRef} style={styles.videoPreview} playsInline muted />
                 <View style={styles.scannerTarget} />
-                <Text style={styles.scannerHelp}>Center the QR code within the frame</Text>
+                <Text style={styles.scannerHelp}>{scanStatus}</Text>
               </View>
             </View>
 
+            <TouchableOpacity
+              style={[styles.connectBtn, isScanning && styles.connectBtnDisabled]}
+              onPress={!isScanning ? startWebScan : undefined}
+              disabled={isScanning}
+            >
+              <Text style={styles.connectBtnText}>{isScanning ? 'Scanning…' : 'Open Camera'}</Text>
+            </TouchableOpacity>
 
+            <Text style={styles.manualLabel}>Or paste a wallet address manually</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0x... or wallet address"
+              placeholderTextColor={CloudVoidTheme.colors.textDisabled}
+              value={manualAddress}
+              onChangeText={setManualAddress}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={() => {
+                if (!manualAddress.trim()) {
+                  Alert.alert('Address required', 'Paste or type a wallet address first.');
+                  return;
+                }
+                Alert.alert('Address ready', `Using wallet address: ${manualAddress}`);
+              }}
+            >
+              <Text style={styles.secondaryBtnText}>Use Address</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -163,7 +279,7 @@ const styles = StyleSheet.create({
   qrPlaceholder: {
     width: 180,
     height: 180,
-    backgroundcolor: CloudVoidTheme.colors.textPrimary,
+    backgroundColor: CloudVoidTheme.colors.textPrimary,
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
@@ -182,7 +298,7 @@ const styles = StyleSheet.create({
     height: 28,
     borderWidth: 5,
     borderColor: '#000000',
-    backgroundcolor: CloudVoidTheme.colors.textPrimary,
+    backgroundColor: CloudVoidTheme.colors.textPrimary,
   },
   qrCore: {
     width: 60,
@@ -256,6 +372,62 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     width: '100%',
+  },
+  videoPreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
+    backgroundColor: '#000',
+  },
+  connectBtn: {
+    width: '100%',
+    backgroundColor: CloudVoidTheme.colors.accent,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 32,
+  },
+  connectBtnDisabled: {
+    opacity: 0.6,
+  },
+  connectBtnText: {
+    color: '#111827',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  manualLabel: {
+    marginTop: 22,
+    alignSelf: 'flex-start',
+    color: CloudVoidTheme.colors.textPrimary,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  input: {
+    width: '100%',
+    backgroundColor: CloudVoidTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: CloudVoidTheme.colors.border,
+    borderRadius: 12,
+    color: CloudVoidTheme.colors.textPrimary,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 12,
+    fontSize: 14,
+  },
+  secondaryBtn: {
+    width: '100%',
+    backgroundColor: 'rgba(139,92,246,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(139,92,246,0.25)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  secondaryBtnText: {
+    color: CloudVoidTheme.colors.accent,
+    fontWeight: '700',
+    fontSize: 14,
   },
   mockScanBtn: {
     backgroundColor: CloudVoidTheme.colors.accent,

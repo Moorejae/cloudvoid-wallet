@@ -9,6 +9,8 @@ export default function App() {
 
   useEffect(() => {
     applyTheme(theme);
+    // Restore additional wallets persisted in SecureStore (native) on launch.
+    useWalletStore.getState().hydrateWallets().catch(() => {});
   }, [theme]);
 
   return (

@@ -6,13 +6,14 @@ import { useNavigation } from '@react-navigation/native';
 import { fetchWalletBalance, fetchTrendingTokens, fetchNewListings, getSwapQuote, TrendingToken, NewListing, SwapQuote } from '../services/web3Api';
 import { useWalletStore } from '../stores/walletStore';
 import { Alert } from 'react-native';
+import { usePreventLeave } from '../hooks/usePreventLeave';
 
 export default function CryptoTradingScreen() {
   const [balance, setBalance] = useState<{ totalValueUSD: number; balances: Record<string, number> } | null>(null);
   const [trending, setTrending] = useState<TrendingToken[]>([]);
   const [newListings, setNewListings] = useState<NewListing[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  
+
   const [fromToken, setFromToken] = useState('USDT');
   const [toToken, setToToken] = useState('DOGE');
   const [amount, setAmount] = useState('');
@@ -20,19 +21,24 @@ export default function CryptoTradingScreen() {
   const [quoting, setQuoting] = useState(false);
 
   const navigation = useNavigation<any>();
+
+  usePreventLeave(navigation, parseFloat(amount) > 0, {
+    title: 'Discard swap?',
+    message: 'Your swap order will be lost if you leave.',
+  });
   const userTokens = useWalletStore(state => state.tokens);
   const userId = useWalletStore(state => state.userId);
   const wallets = useWalletStore(state => state.wallets);
   const activeWalletId = useWalletStore(state => state.activeWalletId);
   // Real wallet address — swaps sign against the user's actual derived address.
   const activeWallet = wallets.find(w => w.id === activeWalletId) || wallets[0];
-  const walletAddress = activeWallet?.address || userId || '';
+  const walletAddress = (activeWallet?.address ?? userId ?? '').trim();
 
   useEffect(() => {
     const loadAllData = async () => {
       setLoadingData(true);
       const [bal, trend, news] = await Promise.all([
-        fetchWalletBalance(userId),
+        fetchWalletBalance(userId ?? ''),
         fetchTrendingTokens(),
         fetchNewListings()
       ]);
@@ -46,12 +52,12 @@ export default function CryptoTradingScreen() {
 
   const handleGetQuote = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
-    if (!walletAddress) {
+    if (!walletAddress || !walletAddress.trim()) {
       Alert.alert('No Wallet', 'Create or import a wallet before trading.');
       return;
     }
     setQuoting(true);
-    const result = await getSwapQuote(fromToken, toToken, parseFloat(amount), walletAddress);
+    const result = await getSwapQuote(fromToken, toToken, parseFloat(amount), walletAddress.trim());
     setQuote(result);
     setQuoting(false);
   };

@@ -13,6 +13,10 @@ const PROTOCOL = 'cloudvoid-riverbed-v1';
 const te = new TextEncoder();
 const td = new TextDecoder();
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
 export interface Envelope {
   v: number;
   clientPub: string; // raw P-256 point (65 bytes), base64url
@@ -50,7 +54,7 @@ export async function createSession(serverPublicKeyB64Url: string): Promise<Rive
   )) as CryptoKeyPair;
   const serverPub = await crypto.subtle.importKey(
     'spki',
-    unb64url(serverPublicKeyB64Url),
+    toArrayBuffer(unb64url(serverPublicKeyB64Url)),
     { name: 'ECDH', namedCurve: 'P-256' },
     false,
     []
@@ -61,7 +65,12 @@ export async function createSession(serverPublicKeyB64Url: string): Promise<Rive
 async function deriveAesKey(shared: ArrayBuffer): Promise<CryptoKey> {
   const hkdfKey = await crypto.subtle.importKey('raw', shared, 'HKDF', false, ['deriveKey']);
   return crypto.subtle.deriveKey(
-    { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: te.encode(PROTOCOL) },
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: toArrayBuffer(new Uint8Array(0)),
+      info: toArrayBuffer(te.encode(PROTOCOL)),
+    },
     hkdfKey,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -84,7 +93,7 @@ export async function encryptPayload(session: RiverbedSession, payload: unknown)
   const aesKey = await computeAesKey(session);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const combined = new Uint8Array(
-    await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, te.encode(JSON.stringify(payload)))
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv: toArrayBuffer(iv) }, aesKey, toArrayBuffer(te.encode(JSON.stringify(payload))))
   );
   const tag = combined.slice(combined.length - 16);
   const ct = combined.slice(0, combined.length - 16);
@@ -94,11 +103,16 @@ export async function encryptPayload(session: RiverbedSession, payload: unknown)
 /** Decrypt an envelope received from the backend. */
 export async function decryptPayload(session: RiverbedSession, envelope: Envelope): Promise<unknown> {
   const aesKey = await computeAesKey(session);
-  const combined = new Uint8Array([...unb64url(envelope.ct), ...unb64url(envelope.tag)]);
+  const ct = unb64url(envelope.ct);
+  const tag = unb64url(envelope.tag);
+  const combined = new Uint8Array(ct.length + tag.length);
+  combined.set(ct, 0);
+  combined.set(tag, ct.length);
+
   const plain = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: unb64url(envelope.iv), tagLength: 128 },
+    { name: 'AES-GCM', iv: toArrayBuffer(unb64url(envelope.iv)), tagLength: 128 },
     aesKey,
-    combined
+    toArrayBuffer(combined)
   );
   return JSON.parse(td.decode(plain));
 }

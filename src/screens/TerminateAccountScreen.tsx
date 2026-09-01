@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   mcCircle: { width: 30, height: 30, borderRadius: 15, position: 'absolute' },
   
   warningCard: {
-    backgroundcolor: CloudVoidTheme.colors.textPrimary,
+    backgroundColor: CloudVoidTheme.colors.textPrimary,
     width: '100%',
     borderRadius: 20,
     padding: 20,

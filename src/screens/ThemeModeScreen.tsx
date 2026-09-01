@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   lightCard: {
-    backgroundcolor: CloudVoidTheme.colors.textPrimary,
+    backgroundColor: CloudVoidTheme.colors.textPrimary,
     borderColor: '#e5e7eb',
   },
   cardSelectedDark: {

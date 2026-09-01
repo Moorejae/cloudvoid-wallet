@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert, Image, Platform, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert, Image, Platform, Modal, TextInput, ActivityIndicator, Pressable } from 'react-native';
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Circle } from 'react-native-svg';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TRANSLATIONS } from '../utils/translations';
 import { getFiatBuyQuote, executeFiatBuy } from '../services/web3Api';
 import { chainById } from '../services/chains';
+import { fetchCoinGeckoPrices, fetchCoinGeckoToken } from '../services/coinGecko';
 
 interface TokenItem {
   symbol: string;
@@ -19,11 +20,11 @@ interface TokenItem {
 }
 
 const DEFAULT_TOKENS: TokenItem[] = [
-  { symbol: 'BTC', name: 'Bitcoin', price: 30121.75, change: 0.12, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', sparklineData: [40, 45, 42, 50, 48, 55, 60] },
-  { symbol: 'ETH', name: 'Ethereum', price: 121.73, change: -0.56, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [60, 55, 58, 45, 48, 40, 35] },
-  { symbol: 'BNB', name: 'BNB', price: 38.88, change: -0.03, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png', sparklineData: [45, 48, 42, 40, 38, 42, 38] },
-  { symbol: 'XMR', name: 'Monero', price: 107.23, change: 3.45, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/monero/info/logo.png', sparklineData: [20, 25, 30, 40, 50, 55, 60] },
-  { symbol: 'USDT', name: 'Tether', price: 100.00, change: -3.08, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [50, 52, 48, 49, 45, 42, 40] },
+  { symbol: 'BTC', name: 'Bitcoin', price: 64210.50, change: 1.25, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', sparklineData: [40, 45, 42, 50, 48, 55, 60] },
+  { symbol: 'ETH', name: 'Ethereum', price: 3485.20, change: -0.52, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [60, 55, 58, 45, 48, 40, 35] },
+  { symbol: 'BNB', name: 'BNB', price: 575.30, change: 0.85, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png', sparklineData: [45, 48, 42, 40, 38, 42, 38] },
+  { symbol: 'XMR', name: 'Monero', price: 167.00, change: 3.45, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/monero/info/logo.png', sparklineData: [20, 25, 30, 40, 50, 55, 60] },
+  { symbol: 'USDT', name: 'Tether', price: 1.00, change: 0.02, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [50, 52, 48, 49, 45, 42, 40] },
 ];
 
 export default function DashboardScreen({ navigation }: any) {
@@ -31,6 +32,10 @@ export default function DashboardScreen({ navigation }: any) {
   const [tokens, setTokens] = useState<TokenItem[]>(storeTokens);
   const [hideBalance, setHideBalance] = useState(false);
   const [isAddWalletOpen, setIsAddWalletOpen] = useState(false);
+  const [isAddTokenOpen, setIsAddTokenOpen] = useState(false);
+  const [newTokenSymbol, setNewTokenSymbol] = useState('');
+  const [newTokenName, setNewTokenName] = useState('');
+  const [newTokenPrice, setNewTokenPrice] = useState('1');
   const [refreshing, setRefreshing] = useState(false);
   
   const balances = useWalletStore((state) => state.balances);
@@ -76,30 +81,39 @@ export default function DashboardScreen({ navigation }: any) {
   // Fetch real balances from the backend via the riverbed envelope (Phase 1)
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     const loadRealData = async () => {
       try {
+        const livePrices = await fetchCoinGeckoPrices();
+        if (livePrices.length > 0) {
+          const mappedTokens = livePrices.map((token) => ({
+            symbol: token.symbol,
+            name: token.name,
+            price: token.price,
+            change: token.change,
+            iconUrl: token.iconUrl,
+            sparklineData: token.sparklineData,
+          }));
+          // Merge with existing custom tokens that CoinGecko cannot resolve.
+          const existing = useWalletStore.getState().tokens;
+          const merged = existing.map((t) => mappedTokens.find((m) => m.symbol === t.symbol) || t);
+          const added = mappedTokens.filter((m) => !existing.some((t) => t.symbol === m.symbol));
+          const next = [...merged, ...added];
+          setTokens(next);
+          useWalletStore.getState().setTokens(next);
+        }
+
         const { fetchWalletBalances } = require('../services/wallet/balances');
         const balances = await fetchWalletBalances();
         if (!balances) return;
 
-        const mappedTokens: TokenItem[] = [];
         const newBalances: Record<string, number> = {};
-        for (const [chainId, b] of Object.entries(balances)) {
-          if (b.status === 'no_address') continue;
+        for (const [chainId, b] of Object.entries(balances) as [string, any][]) {
+          if (b && b.status === 'no_address') continue;
           const meta = chainById(chainId);
-          if (!meta) continue;
-          newBalances[meta.symbol] = b.balance;
-          mappedTokens.push({
-            symbol: meta.symbol,
-            name: meta.name,
-            price: b.price || 0,
-            change: b.change24h || 0,
-            iconUrl: '',
-            sparklineData: [40, 45, 42, 50, 48, 55, 60]
-          });
+          if (!meta || !b) continue;
+          newBalances[meta.symbol] = Number(b.balance || 0);
         }
-        if (mappedTokens.length > 0) setTokens(mappedTokens);
         useWalletStore.getState().setBalances(newBalances);
       } catch (err) {
         console.warn('Error fetching real balances:', err);
@@ -108,7 +122,7 @@ export default function DashboardScreen({ navigation }: any) {
 
     if (userId) {
       loadRealData();
-      interval = setInterval(loadRealData, 10000);
+      interval = setInterval(loadRealData, 60000);
     }
 
     return () => {
@@ -116,9 +130,94 @@ export default function DashboardScreen({ navigation }: any) {
     };
   }, [userId]);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1500);
+    try {
+      const livePrices = await fetchCoinGeckoPrices();
+      if (livePrices.length > 0) {
+        const mapped = livePrices.map((token) => ({
+          symbol: token.symbol,
+          name: token.name,
+          price: token.price,
+          change: token.change,
+          iconUrl: token.iconUrl,
+          sparklineData: token.sparklineData,
+        }));
+        // Merge: keep custom tokens that CoinGecko could not resolve.
+        const merged = tokens.map((t) => mapped.find((m) => m.symbol === t.symbol) || t);
+        const added = mapped.filter((m) => !tokens.some((t) => t.symbol === m.symbol));
+        const next = [...merged, ...added];
+        setTokens(next);
+        useWalletStore.getState().setTokens(next);
+      }
+    } catch (err) {
+      console.warn('CoinGecko refresh failed:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleAddCustomToken = async () => {
+    const symbol = newTokenSymbol.trim().toUpperCase();
+    const name = newTokenName.trim() || symbol || 'Custom Token';
+    const parsedPrice = Number(newTokenPrice);
+
+    if (!symbol) {
+      Alert.alert('Token symbol required', 'Enter a token symbol before saving.');
+      return;
+    }
+
+    // Try to resolve the REAL token + live price first.
+    let tokenEntry: TokenItem | null = null;
+    try {
+      const live = await fetchCoinGeckoToken(symbol);
+      if (live && live.price > 0) {
+        tokenEntry = {
+          symbol: live.symbol,
+          name: name !== symbol ? name : live.name,
+          price: live.price,
+          change: live.change,
+          iconUrl: live.iconUrl || 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+          sparklineData: live.sparklineData.length ? live.sparklineData : [50, 51, 50, 52, 51, 53, 52],
+        };
+      }
+    } catch {
+      // fall through to manual entry
+    }
+
+    if (!tokenEntry) {
+      if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+        Alert.alert(
+          'Token not found + invalid price',
+          `Could not find a live price for ${symbol}. Enter a valid positive price to add it manually.`
+        );
+        return;
+      }
+      tokenEntry = {
+        symbol,
+        name,
+        price: parsedPrice,
+        change: 0,
+        iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+        sparklineData: [50, 51, 50, 52, 51, 53, 52],
+      };
+    }
+
+    const exists = tokens.some((item) => item.symbol.toUpperCase() === symbol);
+    const nextTokens = exists
+      ? tokens.map((item) => (item.symbol.toUpperCase() === symbol ? tokenEntry! : item))
+      : [...tokens, tokenEntry];
+
+    setTokens(nextTokens);
+    useWalletStore.getState().setTokens(nextTokens);
+    setNewTokenSymbol('');
+    setNewTokenName('');
+    setNewTokenPrice('1');
+    setIsAddTokenOpen(false);
+    Alert.alert(
+      'Token added',
+      `${tokenEntry.name} (${tokenEntry.symbol}) is now in your wallet at $${tokenEntry.price.toLocaleString(undefined, { maximumFractionDigits: 8 })}.`
+    );
   };
 
   const storeTotal = tokens.reduce((sum, token) => sum + (balances[token.symbol] || 0) * token.price, 0);
@@ -172,7 +271,7 @@ export default function DashboardScreen({ navigation }: any) {
               <Path d="M18 16V20M16 18H20" stroke={CloudVoidTheme.colors.accentGlow} strokeWidth="1.5" strokeLinecap="round" />
             </Svg>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Web3Flow')}>
+          <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Web3')}>
             <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               {/* Central globe outline */}
               <Circle cx="12" cy="12" r="5" stroke={CloudVoidTheme.colors.accentGlow} strokeWidth="1.5"/>
@@ -212,7 +311,13 @@ export default function DashboardScreen({ navigation }: any) {
 
 
         {/* Token List */}
-        <Text style={styles.sectionHeader}>{t.totalAssets}</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeader}>{t.totalAssets}</Text>
+          <TouchableOpacity style={styles.addTokenBtn} onPress={() => setIsAddTokenOpen(true)}>
+            <Ionicons name="add-circle-outline" size={18} color={CloudVoidTheme.colors.accent} />
+            <Text style={styles.addTokenText}>Add token</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.tokenList}>
           {tokens.map((token, index) => {
             const isGain = token.change >= 0;
@@ -250,12 +355,48 @@ export default function DashboardScreen({ navigation }: any) {
         </View>
       </ScrollView>
 
+      <Modal visible={isAddTokenOpen} transparent animationType="slide" onRequestClose={() => setIsAddTokenOpen(false)}>
+        <Pressable style={styles.tokenModalOverlay} onPress={() => setIsAddTokenOpen(false)}>
+          <Pressable style={styles.tokenModalCard}>
+            <Text style={styles.tokenModalTitle}>Add custom token</Text>
+            <TextInput
+              style={styles.tokenInput}
+              placeholder="Token symbol"
+              value={newTokenSymbol}
+              onChangeText={setNewTokenSymbol}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+            <TextInput
+              style={styles.tokenInput}
+              placeholder="Token name"
+              value={newTokenName}
+              onChangeText={setNewTokenName}
+            />
+            <TextInput
+              style={styles.tokenInput}
+              placeholder="Price in USD"
+              value={newTokenPrice}
+              onChangeText={setNewTokenPrice}
+              keyboardType="decimal-pad"
+            />
+            <View style={styles.tokenModalActions}>
+              <TouchableOpacity style={styles.tokenModalCancel} onPress={() => setIsAddTokenOpen(false)}>
+                <Text style={styles.tokenModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.tokenModalSave} onPress={handleAddCustomToken}>
+                <Text style={styles.tokenModalSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <AddWalletModal
         isOpen={isAddWalletOpen}
         onClose={() => setIsAddWalletOpen(false)}
-        onNavigateCreate={() => navigation.navigate('CreateWallet')}
-        onNavigateImport={() => navigation.navigate('ImportWallet')}
-        onNavigateHardwareWallet={() => navigation.navigate('ConnectHardwareWallet')}
+        onNavigateCreate={() => navigation.navigate('CreateWallet', { mode: 'add' })}
+        onNavigateImport={() => navigation.navigate('ImportWallet', { mode: 'add' })}
         onTriggerToast={(msg) => Alert.alert('Wallet', msg)}
       />
 
@@ -335,12 +476,31 @@ const styles = StyleSheet.create({
   movementPositive: {
     color: CloudVoidTheme.colors.success,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 24,
+    marginBottom: 16,
+  },
   sectionHeader: {
     fontSize: 15,
     fontWeight: '600',
     color: CloudVoidTheme.colors.textHeader,
-    marginHorizontal: 24,
-    marginBottom: 16,
+  },
+  addTokenBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+  },
+  addTokenText: {
+    color: CloudVoidTheme.colors.accent,
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   tokenList: {
     backgroundColor: CloudVoidTheme.colors.surface,
@@ -421,6 +581,61 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+  },
+  tokenModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  tokenModalCard: {
+    backgroundColor: CloudVoidTheme.colors.surfaceElevated,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: CloudVoidTheme.colors.border,
+  },
+  tokenModalTitle: {
+    color: CloudVoidTheme.colors.textHeader,
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  tokenInput: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12,
+    padding: 14,
+    color: CloudVoidTheme.colors.textPrimary,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  tokenModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 8,
+  },
+  tokenModalCancel: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  tokenModalCancelText: {
+    color: CloudVoidTheme.colors.textSecondary,
+    fontWeight: '600',
+  },
+  tokenModalSave: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: CloudVoidTheme.colors.accent,
+  },
+  tokenModalSaveText: {
+    color: '#fff',
+    fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,

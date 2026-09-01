@@ -71,7 +71,7 @@ export default function AIBrain({ currentRouteName = 'Wallet' }: { currentRouteN
   ).current;
 
   const blockedRoutes = [
-    'Welcome', 'Login', 'Register', 'EmailVerify', 'WalletSetup', 'ImportWallet', 'CreateWallet', 'SeedPhraseVerify',
+    'Welcome', 'Login', 'Register', 'WalletSetup', 'ImportWallet', 'CreateWallet', 'SeedPhraseVerify',
     'FiatHub', 'VirtualCard', 'CardInfo', 'FundCard', 'TopUpUSDT', 'SetLimit', 'TerminateAccount', 'FiatTransactionList', 'IssueCard', 'ConvertFiat', 'MerchantFinder',
     'Connect', 'Web3Flow'
   ];

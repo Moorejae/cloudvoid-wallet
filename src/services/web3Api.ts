@@ -55,6 +55,8 @@ export interface SwapQuote {
   priceImpact: string;
   expiresIn: number;
   route: string;
+  router?: string;
+  chain?: string;
 }
 
 export interface SwapResult {

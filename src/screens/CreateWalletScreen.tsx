@@ -10,13 +10,20 @@ import * as ScreenCapture from 'expo-screen-capture';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import AuthBackgroundVideo from '../components/AuthBackgroundVideo';
+import { usePreventLeave } from '../hooks/usePreventLeave';
 
-export default function CreateWalletScreen({ navigation }: any) {
+export default function CreateWalletScreen({ navigation, route }: any) {
   const [mnemonic, setMnemonic] = useState('');
   const [isBlurred, setIsBlurred] = useState(false);
   const [clipboardTimer, setClipboardTimer] = useState(0);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+
+  // Never silently abandon a freshly generated seed phrase.
+  usePreventLeave(navigation, true, {
+    title: 'Secure your phrase first',
+    message: 'You are about to leave without confirming your new recovery phrase. You will lose it.',
+  });
 
   useFocusEffect(
     React.useCallback(() => {
@@ -86,7 +93,7 @@ export default function CreateWalletScreen({ navigation }: any) {
   };
 
   const handleCloudSave = () => {
-    navigation.navigate('CloudBackup', { mode: 'export', mnemonic });
+    navigation.navigate('CloudBackup', { mode: 'export', mnemonic, walletMode: route?.params?.mode });
   };
 
   const handleDownloadTxt = async () => {
@@ -102,7 +109,8 @@ export default function CreateWalletScreen({ navigation }: any) {
       Alert.alert('Success', 'Backup text file downloaded successfully.');
     } else {
       try {
-        const fileUri = FileSystem.documentDirectory + 'cloudvoid_secret_phrase.txt';
+        const baseDir = (FileSystem as any).documentDirectory ?? (FileSystem as any).cacheDirectory ?? '';
+        const fileUri = baseDir + 'cloudvoid_secret_phrase.txt';
         await FileSystem.writeAsStringAsync(fileUri, fileContent, { encoding: FileSystem.EncodingType.UTF8 });
         await Sharing.shareAsync(fileUri);
       } catch (err: any) {
@@ -112,7 +120,7 @@ export default function CreateWalletScreen({ navigation }: any) {
   };
 
   const handleContinue = () => {
-    navigation.navigate('SeedPhraseVerify', { mnemonic });
+    navigation.navigate('SeedPhraseVerify', { mnemonic, mode: route?.params?.mode });
   };
 
   const words = mnemonic.split(' ');
@@ -167,7 +175,7 @@ export default function CreateWalletScreen({ navigation }: any) {
 
           {/* Security Mandate */}
           <View style={styles.warningBanner}>
-            <Ionicons name="shield-alert" size={20} color="#F59E0B" style={{ marginRight: 10 }} />
+            <Ionicons name="shield-outline" size={20} color="#F59E0B" style={{ marginRight: 10 }} />
             <View style={{ flex: 1 }}>
               <Text style={styles.warningTitle}>Security Protocol</Text>
               <Text style={styles.warningBody}>

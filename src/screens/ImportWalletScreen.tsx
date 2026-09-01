@@ -12,8 +12,9 @@ import { deriveAllChainAddresses } from '../services/wallet/derive';
 import { saveAddresses, savePrimaryAddress } from '../services/wallet/storage';
 import VaultPasswordModal from '../components/VaultPasswordModal';
 import AuthBackgroundVideo from '../components/AuthBackgroundVideo';
+import { usePreventLeave } from '../hooks/usePreventLeave';
 
-export default function ImportWalletScreen({ navigation }: any) {
+export default function ImportWalletScreen({ navigation, route }: any) {
   const [mnemonicInput, setMnemonicInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [vaultPassword, setVaultPassword] = useState('');
@@ -21,9 +22,16 @@ export default function ImportWalletScreen({ navigation }: any) {
   const pendingImportRef = useRef<{ input: string; isMnemonic: boolean } | null>(null);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+
+  usePreventLeave(navigation, mnemonicInput.trim().length > 0, {
+    title: 'Discard import?',
+    message: 'The recovery phrase you entered will be cleared if you leave.',
+  });
   
   const setUserId = useWalletStore((state) => state.setUserId);
   const setMnemonic = useWalletStore((state) => state.setMnemonic);
+  const wallets = useWalletStore((state) => state.wallets);
+  const isAddMode = route?.params?.mode === 'add' && wallets.length > 0;
 
   const handleFileImport = async () => {
     try {
@@ -111,6 +119,16 @@ export default function ImportWalletScreen({ navigation }: any) {
       }
 
       const primary = addresses.eth || '';
+
+      if (isAddMode) {
+        // "Add New Wallet" — import into a new wallet without touching primary.
+        const nextIndex = wallets.length + 1;
+        await useWalletStore.getState().addExtraWallet(`Wallet ${nextIndex}`, secret, addresses, password);
+        Alert.alert('Wallet Added', `Imported wallet added and now active.`);
+        navigation.popToTop();
+        return;
+      }
+
       await setMnemonic(secret, password);
       await saveAddresses(addresses);
       if (primary) await savePrimaryAddress(primary);

@@ -806,9 +806,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  editPaymentBtn: {
-    padding: 8,
-  },
   editPaymentSheet: {
     backgroundColor: '#1f2937',
     borderTopLeftRadius: 24,

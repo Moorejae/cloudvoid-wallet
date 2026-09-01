@@ -13,7 +13,6 @@ import { useWalletStore } from '../stores/walletStore';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
-import EmailVerifyScreen from '../screens/EmailVerifyScreen';
 import ImportWalletScreen from '../screens/ImportWalletScreen';
 import CreateWalletScreen from '../screens/CreateWalletScreen';
 import SeedPhraseVerifyScreen from '../screens/SeedPhraseVerifyScreen';
@@ -38,7 +37,6 @@ import SendScreen from '../screens/SendScreen';
 import ReceiveScreen from '../screens/ReceiveScreen';
 import SwapScreen from '../screens/SwapScreen';
 import CloudBackupScreen from '../screens/CloudBackupScreen';
-import ConnectHardwareWalletScreen from '../screens/ConnectHardwareWalletScreen';
 import MoneroViewerScreen from '../screens/MoneroViewerScreen';
 
 // Web3 Flow Screens
@@ -46,7 +44,6 @@ import DAppsScreen from '../screens/DAppsScreen';
 import DAppDetailScreen from '../screens/DAppDetailScreen';
 import CryptoTradingScreen from '../screens/CryptoTradingScreen';
 import SwapConfirmationScreen from '../screens/SwapConfirmationScreen';
-import WalletConnectScannerScreen from '../screens/WalletConnectScannerScreen';
 import QRModalScreen from '../screens/QRModalScreen';
 
 // Import Floating AI assistant
@@ -198,7 +195,6 @@ function AuthStack() {
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
-      <Stack.Screen name="EmailVerify" component={EmailVerifyScreen} />
       <Stack.Screen name="ImportWallet" component={ImportWalletScreen} />
       <Stack.Screen name="CreateWallet" component={CreateWalletScreen} />
       <Stack.Screen name="SeedPhraseVerify" component={SeedPhraseVerifyScreen} />
@@ -271,8 +267,21 @@ export default function AppNavigator() {
   const userId = useWalletStore((state) => state.userId);
   const [currentRoute, setCurrentRoute] = useState('Wallet');
 
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+      return '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   const blockedRoutes = [
-    'TerminateAccount', 'DAppDetail', 'SwapConfirmation', 'WalletConnectScanner'
+    'TerminateAccount', 'DAppDetail', 'SwapConfirmation'
   ];
   const showAI = userId && !blockedRoutes.includes(currentRoute);
 
@@ -307,7 +316,6 @@ export default function AppNavigator() {
             <Stack.Screen name="Receive" component={ReceiveScreen} />
             <Stack.Screen name="Swap" component={SwapScreen} />
             <Stack.Screen name="QRModal" component={QRModalScreen} />
-            <Stack.Screen name="WalletConnectScanner" component={WalletConnectScannerScreen} />
             <Stack.Screen name="DApps" component={DAppsScreen} />
             <Stack.Screen name="CryptoTrading" component={CryptoTradingScreen} />
             <Stack.Screen name="DAppDetail" component={DAppDetailScreen} />
@@ -321,11 +329,13 @@ export default function AppNavigator() {
             <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
             <Stack.Screen name="ThemeMode" component={ThemeModeScreen} />
             
-            {/* One-chance seed rule: wallet creation/import only runs in the
-                pre-auth AuthFlow. A logged-in wallet can never be overwritten
-                by a new seed — use Manage Wallets / Switch Wallet instead. */}
+            {/* Wallet creation/import is reachable while logged in as an "Add
+                New Wallet" flow — it ADDS an extra wallet, never overwrites the
+                primary seed (see SeedPhraseVerify/ImportWallet mode="add"). */}
+            <Stack.Screen name="CreateWallet" component={CreateWalletScreen} />
+            <Stack.Screen name="ImportWallet" component={ImportWalletScreen} />
+            <Stack.Screen name="SeedPhraseVerify" component={SeedPhraseVerifyScreen} />
             <Stack.Screen name="CloudBackup" component={CloudBackupScreen} />
-            <Stack.Screen name="ConnectHardwareWallet" component={ConnectHardwareWalletScreen} />
           </Stack.Group>
         </Stack.Navigator>
 

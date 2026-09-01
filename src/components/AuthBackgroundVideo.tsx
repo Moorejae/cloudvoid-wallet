@@ -93,10 +93,8 @@ function NativeBackgroundVideo({
   return (
     <View style={styles.container}>
       <VideoView
-        style={StyleSheet.absoluteFill}
+        style={StyleSheet.absoluteFill as any}
         player={player}
-        allowsFullscreen={false}
-        allowsPictureInPicture={false}
         showsTimecodes={false}
         nativeControls={false}
         contentFit="cover"
@@ -120,7 +118,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 1,
   },
   content: {

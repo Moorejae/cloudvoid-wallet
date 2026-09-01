@@ -24,7 +24,7 @@ interface DappItem {
   tint: string;
 }
 
-const ALL_DAPPS: DappItem[] = [
+export const ALL_DAPPS: DappItem[] = [
   // --- DEX ---
   { name: 'Uniswap', desc: 'Swap tokens instantly across 10+ EVM networks', icon: 'https://cryptologos.cc/logos/uniswap-uni-logo.png', category: 'DEX', tint: '#ff007a' },
   { name: 'PancakeSwap', desc: 'Trade, earn, and win on BNB Chain and Ethereum', icon: 'https://cryptologos.cc/logos/pancakeswap-cake-logo.png', category: 'DEX', tint: '#D1884F' },

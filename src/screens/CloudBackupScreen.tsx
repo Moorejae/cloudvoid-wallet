@@ -1,165 +1,178 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
-import { CloudVoidTheme } from '../theme/tokens';
 import { Ionicons } from '@expo/vector-icons';
 import { useWalletStore } from '../stores/walletStore';
 import * as Haptics from 'expo-haptics';
-import { API_BASE_URL } from '../services/web3Api';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 
-// Ensure Google Sign-In is configured with the correct scopes and Client ID
-GoogleSignin.configure({
-  scopes: ['profile', 'email', 'https://www.googleapis.com/auth/drive.file'],
-  webClientId: '141857948281-547s5hcr7t0j3sbfepd23282fshd232a.apps.googleusercontent.com',
-  // TODO: Add iosClientId when you are ready to build for iOS
-  // iosClientId: 'YOUR_IOS_CLIENT_ID_HERE',
-});
+const BACKUP_FILENAME = 'cloudvoid_backup.txt';
+const API_BASE = (typeof window !== 'undefined' && window.location.hostname.includes('cloudvoid.online'))
+  ? 'https://api.cloudvoid.online'
+  : 'http://localhost:3000';
+
+function buildBackupContent(mnemonic: string): string {
+  return [
+    'CloudVoid Wallet Secret Recovery Phrase',
+    '========================================',
+    mnemonic,
+    '',
+    'Keep this file offline and private. Anyone with it controls your funds.',
+  ].join('\n');
+}
+
+/** Parse a BIP-39 recovery phrase out of a raw backup file (12/18/24 words). */
+function extractPhrase(raw: string): string | null {
+  const words = raw.match(/[a-zA-Z]+/g) || [];
+  for (const len of [24, 18, 12]) {
+    for (let i = 0; i <= words.length - len; i++) {
+      const candidate = words.slice(i, i + len).join(' ');
+      if (/^[a-z]+(\s[a-z]+)+$/.test(candidate)) return candidate;
+    }
+  }
+  return null;
+}
+
+/** Web: trigger a real file download via an <a download> element. */
+function downloadBlob(content: string, filename: string) {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+/** Web: read a picked file as text via FileReader. */
+function readWebFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Could not read file'));
+    reader.readAsText(file);
+  });
+}
 
 export default function CloudBackupScreen({ route, navigation }: any) {
   const mode = route.params?.mode || 'import';
   const mnemonicToExport = route.params?.mnemonic || '';
-  
-  const [step, setStep] = useState<'account_selection' | 'processing' | 'file_selection'>('account_selection');
-  
+
+  const [step, setStep] = useState<'account_selection' | 'processing'>('account_selection');
+  const isWeb = Platform.OS === 'web';
+
   const setUserId = useWalletStore((state) => state.setUserId);
   const setMnemonic = useWalletStore((state) => state.setMnemonic);
+  const wallets = useWalletStore((state) => state.wallets);
 
-  const [accessToken, setAccessToken] = useState('');
-  const [googleUser, setGoogleUser] = useState<any>(null);
-  const [driveFiles, setDriveFiles] = useState<any[]>([]);
-
-  const handleGoogleSignIn = async () => {
+  const saveBackupFile = async () => {
     setStep('processing');
     try {
-      await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
-      const tokens = await GoogleSignin.getTokens();
-      
-      const user = userInfo.user || userInfo; // API shape might vary slightly by version
-      
-      setAccessToken(tokens.accessToken);
-      setGoogleUser(user);
-      
-      if (mode === 'export') {
-        uploadToDrive(tokens.accessToken, user);
+      const content = buildBackupContent(mnemonicToExport);
+
+      if (isWeb) {
+        downloadBlob(content, BACKUP_FILENAME);
       } else {
-        listDriveFiles(tokens.accessToken);
+        const baseDir = (FileSystem as any).documentDirectory ?? (FileSystem as any).cacheDirectory ?? '';
+        const fileUri = `${baseDir}${BACKUP_FILENAME}`;
+        await FileSystem.writeAsStringAsync(fileUri, content, { encoding: FileSystem.EncodingType.UTF8 });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, { mimeType: 'text/plain', dialogTitle: 'CloudVoid Backup' });
+        }
       }
-    } catch (error: any) {
-      console.warn('Google Sign-In Error:', error);
-      Alert.alert('Sign-In Error', error.message || 'Google Authentication failed or was cancelled.');
-      setStep('account_selection');
-    }
-  };
 
-  const uploadToDrive = async (token: string, user: any) => {
-    try {
-      const boundary = 'foo_bar_baz';
-      const delimiter = "\r\n--" + boundary + "\r\n";
-      const close_delim = "\r\n--" + boundary + "--";
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        'Backup saved',
+        isWeb
+          ? 'Your recovery phrase file was downloaded. Store it offline and private.'
+          : 'Your recovery phrase was exported. Store it offline and private.'
+      );
 
-      const metadata = {
-        name: 'CloudVoid_Secret_Phrase.txt',
-        mimeType: 'text/plain'
-      };
-
-      const multipartRequestBody =
-        delimiter +
-        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-        JSON.stringify(metadata) +
-        delimiter +
-        'Content-Type: text/plain\r\n\r\n' +
-        mnemonicToExport +
-        close_delim;
-
-      const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': `multipart/related; boundary=${boundary}`,
-        },
-        body: multipartRequestBody,
-      });
-
-      if (res.ok) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert('Backup Successful', `Wallet backed up securely to ${user.email || 'your account'}'s Google Drive.`);
-        navigation.navigate('SeedPhraseVerify', { mnemonic: mnemonicToExport });
+      // Pre-auth flow still needs the phrase verified; if a wallet already
+      // exists this was only a backup export, so just go back.
+      if (wallets.length > 0) {
+        navigation.goBack();
       } else {
-        throw new Error('Upload failed with status ' + res.status);
+        navigation.navigate('SeedPhraseVerify', { mnemonic: mnemonicToExport, mode: route?.params?.walletMode });
       }
     } catch (e: any) {
-      Alert.alert('Backup Error', 'Failed to save to Google Drive. Check connection or API permissions.');
+      console.warn('Local backup failed:', e);
+      Alert.alert('Backup failed', e?.message || 'Could not save the backup file.');
+    } finally {
       setStep('account_selection');
     }
   };
 
-  const listDriveFiles = async (token: string) => {
-    try {
-      const res = await fetch("https://www.googleapis.com/drive/v3/files?q=name contains 'CloudVoid'", {
-        headers: { Authorization: `Bearer ${token}` },
+  const pickBackupFile = async (): Promise<string | null> => {
+    // Web: open a native file picker and read with FileReader.
+    if (isWeb) {
+      return new Promise<string | null>((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.txt,text/plain';
+        input.onchange = async () => {
+          const file = input.files?.[0];
+          if (!file) return resolve(null);
+          try {
+            resolve(await readWebFile(file));
+          } catch {
+            resolve(null);
+          }
+        };
+        input.click();
       });
-      const data = await res.json();
-      if (data.files && data.files.length > 0) {
-        setDriveFiles(data.files);
-        setStep('file_selection');
-      } else {
-        Alert.alert('No Backups', 'No CloudVoid backups found in this Google Drive.');
-        setStep('account_selection');
-      }
-    } catch (e) {
-      Alert.alert('Error', 'Failed to fetch files from Google Drive.');
-      setStep('account_selection');
     }
+
+    const result = await DocumentPicker.getDocumentAsync({ type: 'text/plain', copyToCacheDirectory: true });
+    if (result.canceled || !result.assets || !result.assets[0]) return null;
+    return FileSystem.readAsStringAsync(result.assets[0].uri);
   };
 
-  const handleFileSelect = async (fileId: string) => {
+  const importBackupFile = async () => {
     setStep('processing');
     try {
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const phrase = await res.text();
-      
+      const fileContent = await pickBackupFile();
+      if (!fileContent) {
+        setStep('account_selection');
+        return;
+      }
+
+      const phrase = extractPhrase(fileContent);
       if (!phrase || phrase.trim().split(/\s+/).length < 12) {
-         throw new Error('Invalid backup file. Seed phrase not found.');
+        throw new Error('No valid 12-24 word recovery phrase found in the selected file.');
       }
 
       const mnemonic = phrase.trim();
       await setMnemonic(mnemonic);
-      
+
+      // Fire-and-forget address sync — wallet restore is purely local.
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-        const response = await fetch(`${API_BASE_URL}/api/wallet/register`, {
+        const response = await fetch(`${API_BASE}/api/wallet/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mnemonic, importMethod: 'google_drive' }),
-          signal: controller.signal as any
+          body: JSON.stringify({ mnemonic, importMethod: 'local_backup' }),
+          signal: controller.signal as any,
         });
         clearTimeout(timeoutId);
-
         const data = await response.json();
-        if (data.tokens) {
-          useWalletStore.getState().setTokens(data.tokens);
-        }
-        if (data.userId) {
-          setUserId(data.userId);
-        }
-      } catch (e) {
-        console.warn('API sync failed or timed out', e);
+        if (data.tokens) useWalletStore.getState().setTokens(data.tokens);
+        if (data.userId) setUserId(data.userId);
+      } catch {
+        // Backend is optional.
       }
-      
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       useWalletStore.getState().resetForNewWallet();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainFlow' }],
-      });
+      navigation.reset({ index: 0, routes: [{ name: 'MainFlow' }] });
     } catch (e: any) {
-      Alert.alert('Import Error', e.message || 'Failed to download and parse backup.');
-      setStep('file_selection');
+      Alert.alert('Import Error', e?.message || 'Failed to parse the selected backup.');
+      setStep('account_selection');
     }
   };
 
@@ -172,25 +185,37 @@ export default function CloudBackupScreen({ route, navigation }: any) {
       </View>
 
       <View style={styles.googleHeader}>
-        <Text style={styles.googleLogo}>Google</Text>
-        <Text style={styles.googleSubtitle}>CloudVoid Drive Sync</Text>
+        <Text style={styles.googleLogo}>Secure Backup</Text>
+        <Text style={styles.googleSubtitle}>Wallet recovery export</Text>
         <Text style={styles.googleDesc}>
-          {mode === 'export' ? 'Backup your recovery phrase securely.' : 'Restore your wallet from Drive.'}
+          {mode === 'export'
+            ? 'Export your recovery phrase to a secure file (downloads on this device).'
+            : 'Restore your wallet from a saved recovery-phrase backup file.'}
         </Text>
       </View>
 
       {step === 'account_selection' && (
         <ScrollView style={styles.accountList}>
-          <TouchableOpacity 
-            style={styles.accountCard} 
-            onPress={handleGoogleSignIn}
+          <TouchableOpacity
+            style={styles.accountCard}
+            onPress={mode === 'export' ? saveBackupFile : importBackupFile}
           >
-            <View style={[styles.avatar, { backgroundColor: '#4285F4' }]}>
-               <Ionicons name="logo-google" size={20} color="#fff" />
+            <View style={[styles.avatar, { backgroundColor: '#8B5CF6' }]}>
+              <Ionicons
+                name={mode === 'export' ? 'cloud-upload-outline' : 'cloud-download-outline'}
+                size={20}
+                color="#fff"
+              />
             </View>
             <View style={styles.accountInfo}>
-              <Text style={styles.accountName}>Sign in with Google</Text>
-              <Text style={styles.accountEmail}>Native Device Accounts</Text>
+              <Text style={styles.accountName}>
+                {mode === 'export' ? 'Export backup file' : 'Import backup file'}
+              </Text>
+              <Text style={styles.accountEmail}>
+                {mode === 'export'
+                  ? 'Download your recovery phrase as a secure file'
+                  : 'Select a recovery-phrase backup file from this device'}
+              </Text>
             </View>
           </TouchableOpacity>
         </ScrollView>
@@ -200,27 +225,8 @@ export default function CloudBackupScreen({ route, navigation }: any) {
         <View style={styles.processingContainer}>
           <ActivityIndicator size="large" color="#4285F4" />
           <Text style={styles.processingText}>
-            {googleUser ? `Syncing with ${googleUser.email || 'your account'}...` : 'Connecting securely to Google...'}
+            {mode === 'export' ? 'Preparing your backup file…' : 'Importing backup from device…'}
           </Text>
-        </View>
-      )}
-
-      {step === 'file_selection' && (
-        <View style={styles.fileSelectionContainer}>
-          <Text style={styles.fileSelectionTitle}>Select Backup File</Text>
-          <Text style={styles.fileSelectionSub}>Found in {googleUser?.email || 'your drive'}</Text>
-          
-          <ScrollView>
-            {driveFiles.map((f, i) => (
-              <TouchableOpacity key={i} style={styles.fileCard} onPress={() => handleFileSelect(f.id)}>
-                <Ionicons name="document-text-outline" size={32} color="#4285F4" />
-                <View style={styles.fileInfo}>
-                  <Text style={styles.fileName}>{f.name}</Text>
-                  <Text style={styles.fileMeta}>CloudVoid Secure Backup</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
         </View>
       )}
     </View>
@@ -307,42 +313,5 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: '#E8EAED',
     fontSize: 16,
-  },
-  fileSelectionContainer: {
-    flex: 1,
-  },
-  fileSelectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  fileSelectionSub: {
-    fontSize: 14,
-    color: '#9AA0A6',
-    marginBottom: 24,
-  },
-  fileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#303134',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#3C4043',
-    marginBottom: 12,
-  },
-  fileInfo: {
-    marginLeft: 16,
-  },
-  fileName: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  fileMeta: {
-    color: '#9AA0A6',
-    fontSize: 13,
   },
 });

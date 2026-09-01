@@ -7,32 +7,7 @@ import AIBrain from '../components/AIBrain';
 import { executeBurnerSweep } from '../services/web3Api';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
-
-const generateMockBurnerAddress = (symbol: string) => {
-  const chars = '0123456789abcdef';
-  const sym = symbol.toUpperCase();
-  if (sym === 'BTC') {
-    const bChars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-    let addr = '1';
-    for (let i = 0; i < 33; i++) addr += bChars[Math.floor(Math.random() * bChars.length)];
-    return addr;
-  } else if (sym === 'SOL') {
-    const sChars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-    let addr = '';
-    for (let i = 0; i < 44; i++) addr += sChars[Math.floor(Math.random() * sChars.length)];
-    return addr;
-  } else if (sym === 'TRX') {
-    const tChars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-    let addr = 'T';
-    for (let i = 0; i < 33; i++) addr += tChars[Math.floor(Math.random() * tChars.length)];
-    return addr;
-  } else {
-    // EVM default
-    let addr = '0x';
-    for (let i = 0; i < 40; i++) addr += chars[Math.floor(Math.random() * 16)];
-    return addr;
-  }
-};
+import { generateBurnerAddress } from '../utils/cryptoRuntime';
 
 export default function TokenDetailScreen({ route, navigation }: any) {
   const token = route.params?.token || { symbol: 'BTC', name: 'Bitcoin', price: 64230.00, change: 2.4, icon: '🧡', iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', color: '#f59e0b' };
@@ -63,7 +38,7 @@ export default function TokenDetailScreen({ route, navigation }: any) {
   const handleGenerateBurner = () => {
     setBurnerState('generating');
     setTimeout(() => {
-      const addr = generateMockBurnerAddress(token.symbol);
+      const addr = generateBurnerAddress(token.symbol);
       setGeneratedAddress(addr);
       setBurnerState('success');
       

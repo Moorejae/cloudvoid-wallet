@@ -6,11 +6,22 @@ import { useWalletStore } from '../stores/walletStore';
 import { deriveAllChainAddresses } from '../services/wallet/derive';
 import { saveAddresses, savePrimaryAddress } from '../services/wallet/storage';
 import VaultPasswordModal from '../components/VaultPasswordModal';
+import { usePreventLeave } from '../hooks/usePreventLeave';
 
 export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
   // Retrieve the mnemonic or fallback to a default BIP-39 phrase for stubs
   const rawMnemonic = route.params?.mnemonic || "abandon ability able about above absent absorb abstract absurd abuse access accident";
   const correctSequence = rawMnemonic.split(' ');
+  // When already logged in and reached via "Add New Wallet", completing
+  // verification ADDS an extra wallet instead of overwriting the primary.
+  const wallets = useWalletStore((state) => state.wallets);
+  const isAddMode = route.params?.mode === 'add' && wallets.length > 0;
+
+  // Don't let a half-completed verification be abandoned silently.
+  usePreventLeave(navigation, true, {
+    title: 'Finish verification',
+    message: 'If you leave now, your new recovery phrase will not be saved.',
+  });
 
   const [scrambledWords, setScrambledWords] = useState<string[]>([]);
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
@@ -53,6 +64,16 @@ export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
       for (const [id, c] of Object.entries(chains)) {
         if (c.address) addresses[id] = c.address;
       }
+
+      if (isAddMode) {
+        // "Add New Wallet": keep the primary wallet untouched, add a new one.
+        const nextIndex = wallets.length + 1;
+        await useWalletStore.getState().addExtraWallet(`Wallet ${nextIndex}`, rawMnemonic, addresses, password);
+        Alert.alert('Wallet Added', `A new wallet has been added and is now active.`);
+        navigation.popToTop();
+        return;
+      }
+
       const primary = addresses.eth || '';
 
       await setMnemonic(rawMnemonic, password);
