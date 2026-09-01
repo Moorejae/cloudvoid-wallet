@@ -8,6 +8,12 @@ import { getSwapQuote, executeSwap, SwapQuote } from '../services/web3Api';
 
 export default function SwapScreen({ navigation }: any) {
   const { balances, setBalances, addTransaction } = useWalletStore((state) => state);
+  const wallets = useWalletStore((state) => state.wallets);
+  const activeWalletId = useWalletStore((state) => state.activeWalletId);
+  const userId = useWalletStore((state) => state.userId);
+  // Real wallet address — swaps sign against the user's actual derived address.
+  const activeWallet = wallets.find(w => w.id === activeWalletId) || wallets[0];
+  const walletAddress = activeWallet?.address || userId || '';
   
   const [fromToken, setFromToken] = useState('USDT');
   const [toToken, setToToken] = useState('SOL');
@@ -29,8 +35,12 @@ export default function SwapScreen({ navigation }: any) {
 
   const handleGetQuote = async () => {
     if (!isInputValid) return;
+    if (!walletAddress) {
+      Alert.alert('No Wallet', 'Create or import a wallet before swapping.');
+      return;
+    }
     setQuoting(true);
-    const result = await getSwapQuote(fromToken, toToken, parsedFrom, '0xMockWalletAddress');
+    const result = await getSwapQuote(fromToken, toToken, parsedFrom, walletAddress);
     if (result) {
       setQuote(result);
     } else {
@@ -53,7 +63,7 @@ export default function SwapScreen({ navigation }: any) {
       fromToken,
       toToken,
       parsedFrom,
-      '0xMockWalletAddress',
+      walletAddress,
       quote.estimatedOutput
     );
 

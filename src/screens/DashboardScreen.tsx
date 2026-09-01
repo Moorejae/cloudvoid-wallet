@@ -7,6 +7,7 @@ import AddWalletModal from '../components/AddWalletModal';
 import { Ionicons } from '@expo/vector-icons';
 import { TRANSLATIONS } from '../utils/translations';
 import { getFiatBuyQuote, executeFiatBuy } from '../services/web3Api';
+import { chainById } from '../services/chains';
 
 interface TokenItem {
   symbol: string;
@@ -22,7 +23,7 @@ const DEFAULT_TOKENS: TokenItem[] = [
   { symbol: 'ETH', name: 'Ethereum', price: 121.73, change: -0.56, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [60, 55, 58, 45, 48, 40, 35] },
   { symbol: 'BNB', name: 'BNB', price: 38.88, change: -0.03, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png', sparklineData: [45, 48, 42, 40, 38, 42, 38] },
   { symbol: 'XMR', name: 'Monero', price: 107.23, change: 3.45, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/monero/info/logo.png', sparklineData: [20, 25, 30, 40, 50, 55, 60] },
-  { symbol: 'USDT', name: 'Ethereum', price: 100.00, change: -3.08, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [50, 52, 48, 49, 45, 42, 40] },
+  { symbol: 'USDT', name: 'Tether', price: 100.00, change: -3.08, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png', sparklineData: [50, 52, 48, 49, 45, 42, 40] },
 ];
 
 export default function DashboardScreen({ navigation }: any) {
@@ -72,33 +73,36 @@ export default function DashboardScreen({ navigation }: any) {
   const symbol = CURRENCY_SYMBOLS[selectedCurrency] || '$';
   const rate = CURRENCY_RATES[selectedCurrency] || 1;
 
-  // Fetch real-time tokens from backend
+  // Fetch real balances from the backend via the riverbed envelope (Phase 1)
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     const loadRealData = async () => {
       try {
-        const { fetchWalletAssets } = require('../services/web3Api');
-        const data = await fetchWalletAssets(userId);
-        if (data && data.assets) {
-          const mappedTokens = data.assets.map((asset: any) => ({
-            symbol: asset.symbol,
-            name: asset.name,
-            price: asset.price,
-            change: asset.change24h,
-            iconUrl: asset.icon,
+        const { fetchWalletBalances } = require('../services/wallet/balances');
+        const balances = await fetchWalletBalances();
+        if (!balances) return;
+
+        const mappedTokens: TokenItem[] = [];
+        const newBalances: Record<string, number> = {};
+        for (const [chainId, b] of Object.entries(balances)) {
+          if (b.status === 'no_address') continue;
+          const meta = chainById(chainId);
+          if (!meta) continue;
+          newBalances[meta.symbol] = b.balance;
+          mappedTokens.push({
+            symbol: meta.symbol,
+            name: meta.name,
+            price: b.price || 0,
+            change: b.change24h || 0,
+            iconUrl: '',
             sparklineData: [40, 45, 42, 50, 48, 55, 60]
-          }));
-          setTokens(mappedTokens);
-          
-          const newBalances: Record<string, number> = {};
-          data.assets.forEach((asset: any) => {
-            newBalances[asset.symbol] = asset.balance;
           });
-          useWalletStore.getState().setBalances(newBalances);
         }
+        if (mappedTokens.length > 0) setTokens(mappedTokens);
+        useWalletStore.getState().setBalances(newBalances);
       } catch (err) {
-        console.warn('Error fetching real data:', err);
+        console.warn('Error fetching real balances:', err);
       }
     };
 

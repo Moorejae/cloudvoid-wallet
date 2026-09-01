@@ -1,80 +1,72 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, AppState, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, AppState, Platform, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useFocusEffect } from '@react-navigation/native';
-import { ethers } from 'ethers';
+import { generateNewSeedPhrase } from '../services/wallet/derive';
 import 'react-native-get-random-values';
 import * as Clipboard from 'expo-clipboard';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import AuthBackgroundVideo from '../components/AuthBackgroundVideo';
 
 export default function CreateWalletScreen({ navigation }: any) {
   const [mnemonic, setMnemonic] = useState('');
   const [isBlurred, setIsBlurred] = useState(false);
   const [clipboardTimer, setClipboardTimer] = useState(0);
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
   useFocusEffect(
     React.useCallback(() => {
-      // Regenerate mnemonic securely every time screen comes into focus.
-      // Ensure all 12 words are completely unique to prevent user confusion.
-      let wallet;
-      let phraseArray;
+      let phrase: string;
+      let phraseArray: string[];
       do {
-        wallet = ethers.Wallet.createRandom();
-        phraseArray = wallet.mnemonic?.phrase.split(' ') || [];
+        phrase = generateNewSeedPhrase();
+        phraseArray = phrase.split(' ');
       } while (new Set(phraseArray).size !== 12);
 
-      if (wallet.mnemonic) {
-        setMnemonic(wallet.mnemonic.phrase);
-      }
+      setMnemonic(phrase);
       setIsBlurred(false);
 
-      // Prevent screenshot / screen recording on native
       if (Platform.OS !== 'web') {
         try {
           ScreenCapture.preventScreenCaptureAsync();
         } catch (e) {}
       }
 
-    // Blur seed phrase or wipe it when app is backgrounded
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'background' || nextAppState === 'inactive') {
-        setIsBlurred(true);
-        // Regenerate on background to prevent returning to the same phrase.
-        // Ensure strictly 12 unique words.
-        let newWallet;
-        let phraseArray;
-        do {
-          newWallet = ethers.Wallet.createRandom();
-          phraseArray = newWallet.mnemonic?.phrase.split(' ') || [];
-        } while (new Set(phraseArray).size !== 12);
+      const subscription = AppState.addEventListener('change', (nextAppState) => {
+        if (nextAppState === 'background' || nextAppState === 'inactive') {
+          setIsBlurred(true);
+          let newPhrase: string;
+          let newArray: string[];
+          do {
+            newPhrase = generateNewSeedPhrase();
+            newArray = newPhrase.split(' ');
+          } while (new Set(newArray).size !== 12);
 
-        if (newWallet.mnemonic) {
-          setMnemonic(newWallet.mnemonic.phrase);
+          setMnemonic(newPhrase);
         }
-      }
-    });
+      });
 
-    return () => {
-      if (Platform.OS !== 'web') {
-        try {
-          ScreenCapture.allowScreenCaptureAsync();
-        } catch (e) {}
-      }
-      subscription.remove();
-    };
-  }, [])
+      return () => {
+        if (Platform.OS !== 'web') {
+          try {
+            ScreenCapture.allowScreenCaptureAsync();
+          } catch (e) {}
+        }
+        subscription.remove();
+      };
+    }, [])
   );
 
-  // Countdown timer for clipboard wipe
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (clipboardTimer > 0) {
       interval = setInterval(() => {
         setClipboardTimer((prev) => {
           if (prev <= 1) {
-            // Wipe clipboard
             Clipboard.setStringAsync('');
             Alert.alert('Clipboard Cleared', 'Mnemonic removed from clipboard cache for security.');
             clearInterval(interval);
@@ -94,7 +86,6 @@ export default function CreateWalletScreen({ navigation }: any) {
   };
 
   const handleCloudSave = () => {
-    // Navigate to CloudBackup with the mnemonic
     navigation.navigate('CloudBackup', { mode: 'export', mnemonic });
   };
 
@@ -127,227 +118,277 @@ export default function CreateWalletScreen({ navigation }: any) {
   const words = mnemonic.split(' ');
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>← Back</Text>
-        </TouchableOpacity>
-      </View>
+    <AuthBackgroundVideo overlayOpacity={isDesktop ? 0.55 : 0.65}>
+      <ScrollView contentContainerStyle={[styles.container, isDesktop && styles.desktopContainer]}>
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={18} color="#ffffff" />
+            <Text style={styles.backBtnText}>Back</Text>
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.header}>
-        <Text style={styles.title}>Your Secret Recovery Phrase</Text>
-        <Text style={styles.warningSub}>
-          Write down these 12 words in order. You will not be shown them again. Keep them offline!
-        </Text>
-      </View>
+        <View style={styles.glassCard}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Secret Recovery Phrase</Text>
+            <Text style={styles.warningSub}>
+              Write down these 12 words in exact order and store them offline. Never share them with anyone.
+            </Text>
+          </View>
 
-      {/* Top Copy Section */}
-      <View style={styles.topCopyContainer}>
-        <TouchableOpacity 
-          style={[styles.copyBtn, CloudVoidTheme.shadows.neonViolet]} 
-          onPress={handleCopy}
-        >
-          <Text style={styles.copyBtnText}>
-            {clipboardTimer > 0 ? `Wiping Cache (${clipboardTimer}s)` : 'Copy Seed Phrase'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          {/* Top Copy Section */}
+          <View style={styles.topCopyContainer}>
+            <TouchableOpacity 
+              style={styles.copyBtn} 
+              onPress={handleCopy}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="copy-outline" size={16} color={CloudVoidTheme.colors.accent} />
+              <Text style={styles.copyBtnText}>
+                {clipboardTimer > 0 ? `Auto-Clearing Cache (${clipboardTimer}s)` : 'Copy 12 Words'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-      {/* 2-Column Word Grid */}
-      <View style={styles.grid}>
-        {words.map((word, idx) => (
-          <View key={idx} style={styles.wordBox}>
-            <Text style={styles.wordIndex}>{idx + 1}.</Text>
-            {isBlurred ? (
-              <TouchableOpacity onPress={() => setIsBlurred(false)} style={styles.revealOverlay}>
-                <Text style={styles.revealText}>Tap to reveal</Text>
+          {/* 2-Column Word Grid */}
+          <View style={styles.grid}>
+            {words.map((word, idx) => (
+              <View key={idx} style={styles.wordBox}>
+                <Text style={styles.wordIndex}>{idx + 1}.</Text>
+                {isBlurred ? (
+                  <TouchableOpacity onPress={() => setIsBlurred(false)} style={styles.revealOverlay}>
+                    <Text style={styles.revealText}>Tap to reveal</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.wordText}>{word}</Text>
+                )}
+              </View>
+            ))}
+          </View>
+
+          {/* Security Mandate */}
+          <View style={styles.warningBanner}>
+            <Ionicons name="shield-alert" size={20} color="#F59E0B" style={{ marginRight: 10 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.warningTitle}>Security Protocol</Text>
+              <Text style={styles.warningBody}>
+                You are shown this master key once. CloudVoid cannot recover lost seed phrases.
+              </Text>
+            </View>
+          </View>
+
+          {/* Bottom Action / Backup Buttons */}
+          <View style={styles.actionButtons}>
+            <View style={styles.backupOptionsRow}>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={handleCloudSave}>
+                <Ionicons name="cloud-upload-outline" size={16} color={CloudVoidTheme.colors.accent} />
+                <Text style={styles.secondaryBtnText}>Google Cloud Backup</Text>
               </TouchableOpacity>
-            ) : (
-              <Text style={styles.wordText}>{word}</Text>
-            )}
+
+              <TouchableOpacity style={styles.secondaryBtn} onPress={handleDownloadTxt}>
+                <Ionicons name="download-outline" size={16} color="#ffffff" />
+                <Text style={styles.secondaryBtnText}>Save to File</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Primary Continue Button */}
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleContinue} activeOpacity={0.85}>
+              <Text style={styles.primaryBtnText}>I've Secured My Recovery Phrase</Text>
+            </TouchableOpacity>
           </View>
-        ))}
-      </View>
-
-      {/* Amber Warning Block */}
-      <View style={styles.warningBanner}>
-        <Text style={styles.warningTitle}>⚠️ Security Mandate</Text>
-        <Text style={styles.warningBody}>
-          You are only shown this 12-key phrase once. Copy it and save it securely. No screenshots should be taken.
-        </Text>
-      </View>
-
-      {/* Bottom Action / Backup Buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.secondaryBtn} onPress={handleCloudSave}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={styles.secondaryBtnText}>Google</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.secondaryBtn} onPress={handleDownloadTxt}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={styles.secondaryBtnText}>Save to File</Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* Primary Continue Button */}
-        <TouchableOpacity style={styles.primaryBtn} onPress={handleContinue}>
-          <Text style={styles.primaryBtnText}>I've Secured My Recovery Phrase</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </AuthBackgroundVideo>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#000000',
     padding: CloudVoidTheme.layout.screenPadding,
-    paddingTop: 50,
+    paddingTop: 30,
+    paddingBottom: 40,
+    justifyContent: 'center',
+    maxWidth: 540,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  desktopContainer: {
+    maxWidth: 580,
+    paddingTop: 40,
   },
   topBar: {
     marginBottom: 20,
+    alignSelf: 'flex-start',
   },
   backBtn: {
-    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    gap: 6,
   },
   backBtnText: {
-    color: CloudVoidTheme.colors.backBtn,
-    fontSize: 16,
+    color: '#ffffff',
+    fontSize: 13,
     fontWeight: '600',
+  },
+  glassCard: {
+    backgroundColor: 'rgba(11, 16, 28, 0.84)',
+    borderRadius: 26,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.6,
+    shadowRadius: 30,
+    elevation: 12,
   },
   header: {
     marginBottom: 16,
   },
+  badge: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 2,
+    color: CloudVoidTheme.colors.accent,
+    marginBottom: 6,
+  },
   title: {
     fontSize: 28,
-    fontWeight: '700',
-    color: CloudVoidTheme.colors.textHeader,
-    marginBottom: 10,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: -0.5,
+    marginBottom: 6,
   },
   warningSub: {
-    fontSize: 14,
-    color: CloudVoidTheme.colors.warning,
-    lineHeight: 20,
-    fontWeight: '600',
+    fontSize: 13.5,
+    color: 'rgba(255, 255, 255, 0.65)',
+    lineHeight: 19,
   },
   topCopyContainer: {
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   copyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(139, 92, 246, 0.08)',
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
     borderWidth: 1,
-    borderColor: CloudVoidTheme.colors.accent,
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    borderColor: 'rgba(139, 92, 246, 0.4)',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
   },
   copyBtnText: {
     color: CloudVoidTheme.colors.accent,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 28,
+    gap: 10,
+    marginBottom: 20,
   },
   wordBox: {
     width: '48%',
-    backgroundColor: CloudVoidTheme.colors.surface,
-    borderRadius: 8,
+    backgroundColor: 'rgba(5, 8, 16, 0.8)',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: CloudVoidTheme.colors.border,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     flexDirection: 'row',
     alignItems: 'center',
     height: 48,
     paddingHorizontal: 12,
   },
   wordIndex: {
-    fontSize: 13,
-    color: CloudVoidTheme.colors.textSecondary,
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.4)',
     marginRight: 8,
-    fontWeight: '600',
-    width: 20,
+    fontWeight: '700',
+    width: 22,
   },
   wordText: {
-    color: CloudVoidTheme.colors.textPrimary,
+    color: '#ffffff',
     fontSize: 15,
     fontWeight: '700',
   },
   revealOverlay: {
     flex: 1,
-    height: '100%',
-    justifyContent: 'center',
   },
   revealText: {
-    color: CloudVoidTheme.colors.accentGlow,
+    color: CloudVoidTheme.colors.accent,
     fontSize: 13,
     fontWeight: '600',
   },
   warningBanner: {
-    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.2)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 32,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
   },
   warningTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    color: CloudVoidTheme.colors.warning,
-    marginBottom: 6,
+    color: '#F59E0B',
+    marginBottom: 2,
   },
   warningBody: {
     fontSize: 12,
-    color: CloudVoidTheme.colors.textSecondary,
-    lineHeight: 18,
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: 17,
   },
   actionButtons: {
+    width: '100%',
     gap: 12,
-    marginBottom: 40,
+  },
+  backupOptionsRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
   secondaryBtn: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: CloudVoidTheme.radii.button,
-    paddingVertical: 14,
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 52,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 14,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    gap: 6,
   },
   secondaryBtnText: {
-    color: CloudVoidTheme.colors.textPrimary,
-    fontSize: 14,
+    color: '#ffffff',
+    fontSize: 12,
     fontWeight: '600',
   },
   primaryBtn: {
     backgroundColor: CloudVoidTheme.colors.accent,
-    borderRadius: CloudVoidTheme.radii.button,
-    paddingVertical: 16,
+    borderRadius: 14,
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 56,
     shadowColor: CloudVoidTheme.colors.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
-    marginTop: 12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
   primaryBtnText: {
-    color: CloudVoidTheme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
+    color: '#060810',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
 });

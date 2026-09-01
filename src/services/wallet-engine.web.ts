@@ -1,44 +1,14 @@
 /**
- * wallet-engine.web.ts
+ * wallet-engine.web.ts — Web wallet engine.
  *
- * Web-platform stub for the wallet engine.
- * 
- * The full wallet engine (wallet-engine.ts) relies on `tiny-secp256k1` which
- * uses WebAssembly — a security-sensitive native module not suitable for
- * browser execution where private keys could be exposed to XSS attacks.
- *
- * On web, wallet creation and seed phrase generation should always be performed
- * on the mobile app (iOS/Android) where keys are protected by the device secure
- * enclave (Expo SecureStore). This stub allows the web bundle to compile cleanly
- * without any native crypto dependencies.
- *
- * Metro automatically selects this file over wallet-engine.ts when bundling for web.
+ * The Cloudflare-hosted web wallet now supports full 15-chain derivation.
+ * Security on web is provided by the encrypted vault (PBKDF2 + AES-256-GCM):
+ * the mnemonic is stored encrypted in localStorage and only decrypted in-memory
+ * with the user's vault password. Private keys never touch storage.
  */
-
-export interface DerivedWallet {
-  network: string;
-  address: string;
-  privateKey: string;
-}
-
-/**
- * Web stub — seed phrase generation is disabled in the browser for security.
- * Use the CloudVoid mobile app to create your wallet.
- */
-export function generateNewSeedPhrase(): string {
-  throw new Error(
-    'Wallet creation is only available on the CloudVoid mobile app. ' +
-    'Download the app to securely generate your seed phrase.'
-  );
-}
-
-/**
- * Web stub — wallet derivation is disabled in the browser for security.
- * Use the CloudVoid mobile app to access your wallet.
- */
-export function deriveWalletsFromSeed(_mnemonic: string): DerivedWallet[] {
-  throw new Error(
-    'Wallet access is only available on the CloudVoid mobile app. ' +
-    'Download the app to securely access your wallets.'
-  );
-}
+export {
+  generateNewSeedPhrase,
+  deriveWalletsFromSeed,
+  deriveAllChainAddresses,
+} from './wallet/derive';
+export type { DerivedWallet, DerivedChain } from './wallet/derive';

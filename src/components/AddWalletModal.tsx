@@ -27,6 +27,12 @@ export default function AddWalletModal({
   const activeWalletId = useWalletStore((state) => state.activeWalletId) || '1';
   const setActiveWalletId = useWalletStore((state) => state.setActiveWalletId);
 
+  // One-chance seed-save rule: your 12-word phrase is shown exactly once during
+  // onboarding. Creating/importing a NEW main wallet would generate/replace the
+  // seed, so it is blocked once a wallet exists. Switch between accounts instead,
+  // or Logout (wipe) in Settings to start fresh.
+  const hasExistingWallet = wallets.length > 0;
+
   // Reset to default options view when closed
   useEffect(() => {
     if (!isOpen) {
@@ -53,41 +59,56 @@ export default function AddWalletModal({
             
             {modalView === 'options' ? (
               <>
-                <Text style={styles.actionSheetTitle}>Import Wallet</Text>
+                <Text style={styles.actionSheetTitle}>Wallet Options</Text>
 
-                <TouchableOpacity 
-                  style={styles.actionSheetItem}
-                  onPress={() => {
-                    onClose();
-                    onNavigateCreate();
-                  }}
-                >
-                  <View style={styles.actionSheetItemLeft}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.actionSheetItemTitle}>Create New Wallet</Text>
-                      <Text style={styles.actionSheetItemSub}>Generate a new BIP-39 mnemonic seed phrase</Text>
+                {hasExistingWallet ? (
+                  <>
+                    <View style={styles.oneChanceBanner}>
+                      <Ionicons name="key-outline" size={20} color="#f59e0b" />
+                      <Text style={styles.oneChanceText}>
+                        Your 12-word recovery phrase was shown only once during setup. Creating/importing a new main wallet is locked. Use Switch Wallet, or Logout (wipe) in Settings to start over.
+                      </Text>
                     </View>
-                  </View>
-                </TouchableOpacity>
 
-                <View style={styles.actionSheetDivider} />
+                    <View style={styles.actionSheetDivider} />
+                  </>
+                ) : (
+                  <>
+                    <TouchableOpacity 
+                      style={styles.actionSheetItem}
+                      onPress={() => {
+                        onClose();
+                        onNavigateCreate();
+                      }}
+                    >
+                      <View style={styles.actionSheetItemLeft}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.actionSheetItemTitle}>Create New Wallet</Text>
+                          <Text style={styles.actionSheetItemSub}>Generate a new BIP-39 mnemonic seed phrase</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
 
-                <TouchableOpacity 
-                  style={styles.actionSheetItem}
-                  onPress={() => {
-                    onClose();
-                    onNavigateImport();
-                  }}
-                >
-                  <View style={styles.actionSheetItemLeft}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.actionSheetItemTitle}>Import Existing Wallet</Text>
-                      <Text style={styles.actionSheetItemSub}>Enter a seed phrase or private key</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
+                    <View style={styles.actionSheetDivider} />
 
-                <View style={styles.actionSheetDivider} />
+                    <TouchableOpacity 
+                      style={styles.actionSheetItem}
+                      onPress={() => {
+                        onClose();
+                        onNavigateImport();
+                      }}
+                    >
+                      <View style={styles.actionSheetItemLeft}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.actionSheetItemTitle}>Import Existing Wallet</Text>
+                          <Text style={styles.actionSheetItemSub}>Enter a seed phrase or private key</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+
+                    <View style={styles.actionSheetDivider} />
+                  </>
+                )}
 
                 <TouchableOpacity 
                   style={styles.actionSheetItem}
@@ -221,6 +242,23 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 2,
     paddingRight: 16,
+  },
+  oneChanceBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+    marginBottom: 4,
+  },
+  oneChanceText: {
+    flex: 1,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: '#fcd34d',
   },
   actionSheetDivider: {
     height: 1,

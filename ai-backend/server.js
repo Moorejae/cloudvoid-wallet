@@ -12,8 +12,12 @@ const cryptoData = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'cryp
 
 const { extractIntentAndEntities, extractAsset, extractNetwork } = require('./parser/intentEngine');
 const { getSession, updateSession, clearSession } = require('./stateManager');
-const { AUTHORIZED_NETWORKS, deriveAllAddresses, fetchRealBalances } = require('./services/cryptoService');
+const { AUTHORIZED_NETWORKS, deriveAllAddresses, fetchRealBalances, generateWalletAddress } = require('./services/cryptoService');
 const responseGenerator = require('./parser/responseGenerator');
+const { CHAINS: CHAIN_LIST } = require('./config/chains');
+const { ping: pingChain, keyCount } = require('./services/alchemyClient');
+const riverbed = require('./services/riverbed');
+const { getBalances } = require('./services/balanceService');
 
 const app = express();
 app.use(cors());
@@ -29,6 +33,32 @@ const checkAuth = (req, res, next) => {
   }
   next();
 };
+
+// ──────── Admin Revenue Ledger (CloudVoid-O2 admin dashboard) ────────
+// Every platform revenue stream (swap convenience fee, burner receiving fee,
+// dapp referral fee, ...) is recorded here so the admin dashboard can display
+// all incomes and let the admin withdraw from treasury.
+const ADMIN_API_URL = process.env.ADMIN_API_URL || 'http://localhost:8000';
+
+async function recordRevenue({
+  source_type,
+  amount_raw = 0,
+  amount_usd = 0,
+  token_symbol = 'USDT',
+  fee_percent = null,
+}) {
+  try {
+    await axios.post(`${ADMIN_API_URL}/api/admin/revenue/record`, {
+      source_type,
+      amount_raw,
+      amount_usd,
+      token_symbol,
+      fee_percent,
+    });
+  } catch (err) {
+    console.error(`[Revenue] Failed to record ${source_type}:`, err.message);
+  }
+}
 
 // ──────── Helpers ────────
 async function fetchCoinGeckoData(symbol) {
@@ -284,10 +314,27 @@ app.post('/api/concierge', async (req, res) => {
     const symbol = symbolMap[networkRaw.toLowerCase()] || 'ETH';
 
     clearSession(sessionId);
+
+    // A burner address carries a 10% platform receiving fee (one-time address
+    // revenue stream shown on the admin dashboard). The fee is collected when
+    // funds are swept out of the burner (see /api/wallet/burner/sweep).
     return res.json({ 
       speechResponse: responseGenerator.generateResponse('GENERATE_BURNER', tone, { address }), 
       action: 'GENERATE_BURNER', 
-      payload: { address, privateKey, symbol } 
+      payload: { address, privateKey, symbol, receivingFeePercent: 10 } 
+    });
+  }
+
+  // ── 13. SWAP / TRADE / WEB3 ──
+  if (activeSession.currentFlow === 'SWAP' || activeSession.currentFlow === 'OPEN_WEB3') {
+    clearSession(sessionId);
+    const route = activeSession.currentFlow === 'SWAP' ? 'CryptoTrading' : 'Web3';
+    return res.json({
+      speechResponse: route === 'CryptoTrading'
+        ? "Opening crypto & meme-coin trading. You can swap any asset instantly there — a 1% convenience fee applies."
+        : "Opening the Web3 portal. Explore dApps, meme-coin trading and tokenized stocks there.",
+      action: 'NAVIGATE',
+      payload: { route }
     });
   }
 
@@ -454,6 +501,69 @@ app.get('/api/prices', async (req, res) => {
   return res.json(priceCache);
 });
 
+// ──────── Chain Health (Phase 0: prove every network is reachable) ────────
+// Registered for both GET (plain curl) and POST (riverbed envelope) so the
+// frontend can query it through the encrypted channel.
+const healthChainsHandler = async (req, res) => {
+  try {
+    const chains = await Promise.all(
+      CHAIN_LIST.map(async (c) => {
+        const p = await pingChain(c);
+        return { id: c.id, name: c.name, symbol: c.symbol, slug: c.slug, keyIndex: c.keyIndex, ...p };
+      })
+    );
+    return res.json({ success: true, keyCount, chains });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+};
+app.get('/api/health/chains', healthChainsHandler);
+app.post('/api/health/chains', healthChainsHandler);
+
+// ──────── Riverbed Envelope (Phase 0) ────────
+// Server public key (safe to publish; the private key stays on the backend VPS).
+app.get('/api/riverbed/pubkey', (req, res) => {
+  res.json({ success: true, protocol: 'cloudvoid-riverbed-v1', publicKey: riverbed.serverPublicKeyRaw() });
+});
+
+// Envelope round-trip test: decrypt request envelope, respond with encrypted envelope.
+app.post('/api/riverbed/ping', (req, res) => {
+  try {
+    const envelope = req.body;
+    const plain = riverbed.decryptEnvelope(envelope);
+    const response = riverbed.encryptForClient(envelope.clientPub, {
+      pong: true,
+      echo: plain,
+      serverTs: Date.now(),
+    });
+    res.json(response);
+  } catch (err) {
+    res.status(400).json({ error: 'Envelope decryption failed', detail: err.message });
+  }
+});
+
+// ──────── Non-Custodial Balances (Phase 1) ────────
+// Client derives addresses LOCALLY, sends ONLY public addresses through the
+// envelope; the backend looks up real balances (never sees keys/mnemonics).
+app.post('/api/wallet/balances', (req, res) => {
+  let plain;
+  try {
+    plain = riverbed.decryptEnvelope(req.body);
+  } catch (err) {
+    return res.status(400).json({ error: 'Envelope decryption failed', detail: err.message });
+  }
+  const addresses = (plain && plain.addresses) || {};
+  (async () => {
+    const balances = await getBalances(addresses, (symbol) => {
+      const p = priceCache[symbol];
+      return p ? { usd: p.usd, change24h: p.usd_24h_change } : {};
+    });
+    res.json(riverbed.encryptForClient(req.body.clientPub, { success: true, balances }));
+  })().catch((err) => {
+    res.json(riverbed.encryptForClient(req.body.clientPub, { success: false, error: err.message }));
+  });
+});
+
 // ──────── Wallet Endpoints ────────
 app.post('/api/wallet/register', async (req, res) => {
   const { address, mnemonic, importMethod } = req.body;
@@ -540,6 +650,52 @@ app.get('/api/wallet/assets', checkAuth, async (req, res) => {
       assets,
       totalValueUSD
     }
+  });
+});
+
+// ── 11. POST /api/wallet/revenue/record — Generic revenue event ──
+// Lets the frontend record a platform revenue event (e.g. burner receiving fee)
+// straight into the admin dashboard ledger through the encrypted mobile API.
+app.post('/api/wallet/revenue/record', (req, res) => {
+  const { source_type, amount_raw, amount_usd, token_symbol, fee_percent } = req.body || {};
+  if (!source_type || amount_raw == null) {
+    return res.status(400).json({ success: false, error: 'source_type and amount_raw are required' });
+  }
+  recordRevenue({ source_type, amount_raw, amount_usd, token_symbol, fee_percent });
+  return res.json({ success: true, message: `Revenue event '${source_type}' recorded.` });
+});
+
+// ── 12. POST /api/wallet/burner/sweep — Sweep a burner & collect the 10% receiving fee ──
+// A burner address carries a 10% platform receiving fee. When funds are swept
+// out, 10% of the swept amount is recorded to the admin ledger as
+// `one_time_address` revenue (the rest returns to the user).
+app.post('/api/wallet/burner/sweep', async (req, res) => {
+  const { amount, amount_usd, token_symbol, destination } = req.body || {};
+  const swept = parseFloat(amount) || 0;
+  if (swept <= 0) {
+    return res.status(400).json({ success: false, error: 'A positive amount to sweep is required' });
+  }
+
+  const feePct = 0.10; // 10% receiving fee on burner addresses
+  const feeRaw = +(swept * feePct).toFixed(8);
+  const feeUSD = amount_usd != null ? +((parseFloat(amount_usd) || swept) * feePct).toFixed(4) : +feeRaw.toFixed(4);
+
+  await recordRevenue({
+    source_type: 'one_time_address',
+    amount_raw: feeRaw,
+    amount_usd: feeUSD,
+    token_symbol: token_symbol || 'USDT',
+    fee_percent: 10.0,
+  });
+
+  return res.json({
+    success: true,
+    swept: swept,
+    receiving_fee_pct: 10,
+    fee_raw: feeRaw,
+    fee_usd: feeUSD,
+    net_to_destination: +(swept - feeRaw).toFixed(8),
+    destination: destination || 'primary',
   });
 });
 
@@ -686,21 +842,16 @@ app.post('/api/swap/execute', async (req, res) => {
   // Simulate blockchain confirmation delay (1-2 seconds)
   await new Promise(resolve => setTimeout(resolve, 1200 + Math.random() * 800));
 
-  // Log convenience fee to admin dashboard
-  try {
-    const feeRaw = parseFloat(amount) * 0.01;
-    const priceUSD = getTokenPriceUSD(fromToken);
-    const feeUSD = feeRaw * priceUSD;
-    await axios.post('http://localhost:8000/api/admin/revenue/record', {
-      source_type: 'swap_convenience_fee',
-      amount_raw: feeRaw,
-      amount_usd: feeUSD,
-      token_symbol: fromToken || 'USDT',
-      fee_percent: 1.0
-    });
-  } catch (err) {
-    console.error('Error logging swap revenue:', err.message);
-  }
+  // Log convenience fee (1%) to the admin revenue ledger
+  const feeRaw = parseFloat(amount) * 0.01;
+  const priceUSD = getTokenPriceUSD(fromToken);
+  await recordRevenue({
+    source_type: 'swap_convenience_fee',
+    amount_raw: feeRaw,
+    amount_usd: feeRaw * priceUSD,
+    token_symbol: fromToken || 'USDT',
+    fee_percent: 1.0,
+  });
 
   // Generate mock transaction hash
   const chars = '0123456789abcdef';
@@ -709,13 +860,13 @@ app.post('/api/swap/execute', async (req, res) => {
 
   // Record platform revenue event in real-time (1% convenience fee)
   const usdValue = estimateUSDValue(fromToken, amount);
-  const feeUSD = usdValue * 0.01;
-  axios.post('http://localhost:8000/api/admin/revenue/record', {
+  await recordRevenue({
     source_type: 'swap_convenience_fee',
     amount_raw: parseFloat(amount) * 0.01,
-    amount_usd: +feeUSD.toFixed(4),
-    token_symbol: fromToken
-  }).catch(err => console.log('Failed to log swap fee to admin backend:', err.message));
+    amount_usd: +((usdValue * 0.01)).toFixed(4),
+    token_symbol: fromToken,
+    fee_percent: 1.0,
+  });
 
   return res.json({
     success: true,

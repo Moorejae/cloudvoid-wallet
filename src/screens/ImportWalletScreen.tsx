@@ -1,17 +1,26 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, TextInput, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import * as Haptics from 'expo-haptics';
-import { API_BASE_URL } from '../services/web3Api';
 import * as bip39 from 'bip39';
 import { ethers } from 'ethers';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
+import { deriveAllChainAddresses } from '../services/wallet/derive';
+import { saveAddresses, savePrimaryAddress } from '../services/wallet/storage';
+import VaultPasswordModal from '../components/VaultPasswordModal';
+import AuthBackgroundVideo from '../components/AuthBackgroundVideo';
 
 export default function ImportWalletScreen({ navigation }: any) {
   const [mnemonicInput, setMnemonicInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [vaultPassword, setVaultPassword] = useState('');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const pendingImportRef = useRef<{ input: string; isMnemonic: boolean } | null>(null);
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
   
   const setUserId = useWalletStore((state) => state.setUserId);
   const setMnemonic = useWalletStore((state) => state.setMnemonic);
@@ -66,7 +75,6 @@ export default function ImportWalletScreen({ navigation }: any) {
             setMnemonicInput(rawClean);
             Alert.alert('Imported from File', 'Private key parsed and loaded successfully.');
           } else {
-            // Fallback
             const joined = cleanWords.join(' ');
             setMnemonicInput(joined);
             Alert.alert('File Loaded', 'Text file loaded. Please review and edit the seed phrase.');
@@ -80,6 +88,46 @@ export default function ImportWalletScreen({ navigation }: any) {
     }
   };
 
+  const finishImport = async (cleanInput: string, isMnemonic: boolean, password?: string) => {
+    setIsSubmitting(true);
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      const addresses: Record<string, string> = {};
+      let secret = cleanInput;
+
+      if (isMnemonic) {
+        secret = cleanInput.toLowerCase();
+        const chains = deriveAllChainAddresses(secret);
+        for (const [id, c] of Object.entries(chains)) {
+          if (c.address) addresses[id] = c.address;
+        }
+      } else {
+        const pk = cleanInput.startsWith('0x') ? cleanInput : '0x' + cleanInput;
+        const wallet = new ethers.Wallet(pk);
+        for (const id of ['eth', 'poly', 'bnb', 'opbnb', 'avax', 'mnt', 'plasma']) {
+          addresses[id] = wallet.address;
+        }
+      }
+
+      const primary = addresses.eth || '';
+      await setMnemonic(secret, password);
+      await saveAddresses(addresses);
+      if (primary) await savePrimaryAddress(primary);
+
+      setUserId(primary || null);
+      useWalletStore.getState().resetForNewWallet();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'MainFlow' }],
+      });
+    } catch (e: any) {
+      Alert.alert('Import Error', 'Failed to derive wallet: ' + (e?.message || ''));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleImport = async () => {
     const cleanInput = mnemonicInput.trim();
     const isMnemonic = bip39.validateMnemonic(cleanInput.toLowerCase());
@@ -90,221 +138,235 @@ export default function ImportWalletScreen({ navigation }: any) {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      let address = '';
-      if (isMnemonic) {
-        await setMnemonic(cleanInput.toLowerCase());
-        const wallet = ethers.Wallet.fromPhrase(cleanInput.toLowerCase());
-        address = wallet.address;
-      } else {
-        const pk = cleanInput.startsWith('0x') ? cleanInput : '0x' + cleanInput;
-        await setMnemonic(pk); // temporarily reuse mnemonic store for private key storage
-        const wallet = new ethers.Wallet(pk);
-        address = wallet.address;
-      }
+    if (Platform.OS === 'web' && !vaultPassword) {
+      pendingImportRef.current = { input: cleanInput, isMnemonic };
+      setShowPasswordModal(true);
+      return;
+    }
+    await finishImport(cleanInput, isMnemonic, Platform.OS === 'web' ? vaultPassword : undefined);
+  };
 
-      setUserId(address);
-      useWalletStore.getState().resetForNewWallet();
-      
-      // Register with backend with timeout
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-
-        const response = await fetch(`${API_BASE_URL}/api/wallet/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address, mnemonic: cleanInput, importMethod: isMnemonic ? 'mnemonic_import' : 'private_key_import' }),
-          signal: controller.signal as any
-        });
-        clearTimeout(timeoutId);
-
-        const data = await response.json();
-        if (data.tokens) {
-          useWalletStore.getState().setTokens(data.tokens);
-        }
-      } catch (apiError) {
-        console.warn('API Registration failed or timed out, proceeding anyway:', apiError);
-      }
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainFlow' }],
-      });
-    } catch (e: any) {
-      Alert.alert('Import Error', 'Failed to derive wallet: ' + e.message);
-    } finally {
-      setIsSubmitting(false);
+  const handlePasswordConfirm = (password: string) => {
+    setVaultPassword(password);
+    setShowPasswordModal(false);
+    const pending = pendingImportRef.current;
+    if (pending) {
+      finishImport(pending.input, pending.isMnemonic, password);
     }
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.container}>
-        <View>
+    <AuthBackgroundVideo overlayOpacity={isDesktop ? 0.55 : 0.65}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={[styles.container, isDesktop && styles.desktopContainer]}>
           <View style={styles.topBar}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <Text style={styles.backBtnText}>← Back</Text>
+              <Ionicons name="arrow-back" size={18} color="#ffffff" />
+              <Text style={styles.backBtnText}>Back</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.header}>
-            <Text style={styles.title}>Import Wallet</Text>
-            <Text style={styles.subtitle}>
-              Enter your 12, 18, or 24-word seed phrase or private key below to restore your wallet.
-            </Text>
-          </View>
-
-          <TouchableOpacity 
-            style={[styles.secondaryBtn, { marginBottom: 12 }]} 
-            onPress={() => navigation.navigate('CloudBackup', { mode: 'import' })}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={styles.secondaryBtnText}>Google</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.secondaryBtn, { marginBottom: 24 }]} 
-            onPress={handleFileImport}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={styles.secondaryBtnText}>Import from Backup File</Text>
-            </View>
-          </TouchableOpacity>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.textInput}
-              multiline
-              placeholder="Enter your seed phrase or private key here..."
-              placeholderTextColor={CloudVoidTheme.colors.textDisabled}
-              value={mnemonicInput}
-              onChangeText={setMnemonicInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-        </View>
-
-        <View style={styles.bottomSection}>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={[styles.primaryBtn, (!mnemonicInput.trim() || isSubmitting) && styles.primaryBtnDisabled]} 
-              onPress={handleImport}
-              disabled={!mnemonicInput.trim() || isSubmitting}
-            >
-              <Text style={[styles.primaryBtnText, (!mnemonicInput.trim() || isSubmitting) && styles.primaryBtnTextDisabled]}>
-                {isSubmitting ? 'Importing...' : 'Import Wallet'}
+          <View style={styles.glassCard}>
+            <View style={styles.header}>
+              <Text style={styles.badge}>RECOVERY PROTOCOL</Text>
+              <Text style={styles.title}>Import Wallet</Text>
+              <Text style={styles.subtitle}>
+                Enter your 12, 18, or 24-word seed phrase or private key below to restore your assets.
               </Text>
-            </TouchableOpacity>
+            </View>
+
+            <View style={styles.quickImportRow}>
+              <TouchableOpacity 
+                style={styles.secondaryBtn} 
+                onPress={() => navigation.navigate('CloudBackup', { mode: 'import' })}
+              >
+                <Ionicons name="cloud-download-outline" size={16} color={CloudVoidTheme.colors.accent} />
+                <Text style={styles.secondaryBtnText}>Google Cloud Backup</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.secondaryBtn} 
+                onPress={handleFileImport}
+              >
+                <Ionicons name="document-text-outline" size={16} color="#ffffff" />
+                <Text style={styles.secondaryBtnText}>Backup File (.txt)</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.textInput}
+                multiline
+                placeholder="Enter 12-word seed phrase or 0x private key..."
+                placeholderTextColor="rgba(255, 255, 255, 0.35)"
+                value={mnemonicInput}
+                onChangeText={setMnemonicInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.actionButtons}>
+              <TouchableOpacity 
+                style={[styles.primaryBtn, (!mnemonicInput.trim() || isSubmitting) && styles.primaryBtnDisabled]} 
+                onPress={handleImport}
+                disabled={!mnemonicInput.trim() || isSubmitting}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.primaryBtnText, (!mnemonicInput.trim() || isSubmitting) && styles.primaryBtnTextDisabled]}>
+                  {isSubmitting ? 'Decrypting & Importing...' : 'Restore Sovereign Wallet'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+          <VaultPasswordModal
+            visible={showPasswordModal}
+            mode="set"
+            onConfirm={handlePasswordConfirm}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </AuthBackgroundVideo>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#000000',
     padding: CloudVoidTheme.layout.screenPadding,
-    paddingTop: 50,
-    justifyContent: 'space-between',
+    paddingTop: 30,
+    paddingBottom: 40,
+    justifyContent: 'center',
+    maxWidth: 540,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  desktopContainer: {
+    maxWidth: 560,
+    paddingTop: 40,
   },
   topBar: {
     marginBottom: 20,
+    alignSelf: 'flex-start',
   },
   backBtn: {
-    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    gap: 6,
   },
   backBtnText: {
-    color: CloudVoidTheme.colors.backBtn,
-    fontSize: 16,
+    color: '#ffffff',
+    fontSize: 13,
     fontWeight: '600',
+  },
+  glassCard: {
+    backgroundColor: 'rgba(11, 16, 28, 0.84)',
+    borderRadius: 26,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.6,
+    shadowRadius: 30,
+    elevation: 12,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 20,
+  },
+  badge: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 2,
+    color: CloudVoidTheme.colors.accent,
+    marginBottom: 6,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: CloudVoidTheme.colors.textHeader,
-    marginBottom: 10,
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 15,
-    color: CloudVoidTheme.colors.textSubHeader,
+    fontSize: 13.5,
+    color: 'rgba(255, 255, 255, 0.65)',
+    marginTop: 6,
+    lineHeight: 20,
   },
-  inputContainer: {
-    backgroundColor: CloudVoidTheme.colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: CloudVoidTheme.colors.border,
-    minHeight: 120,
-    padding: 16,
-    marginBottom: 24,
-  },
-  textInput: {
-    color: CloudVoidTheme.colors.textPrimary,
-    fontSize: 16,
-    lineHeight: 24,
-    minHeight: 88,
-    textAlignVertical: 'top',
-  },
-  bottomSection: {
-    marginTop: 20,
-  },
-  actionButtons: {
-    gap: 12,
-    marginBottom: 40,
+  quickImportRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 18,
   },
   secondaryBtn: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: CloudVoidTheme.radii.button,
-    paddingVertical: 14,
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 52,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    gap: 6,
   },
   secondaryBtnText: {
-    color: CloudVoidTheme.colors.textPrimary,
-    fontSize: 14,
+    color: '#ffffff',
+    fontSize: 12,
     fontWeight: '600',
+  },
+  inputContainer: {
+    backgroundColor: 'rgba(5, 8, 16, 0.8)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    padding: 16,
+    marginBottom: 22,
+    minHeight: 130,
+  },
+  textInput: {
+    color: '#ffffff',
+    fontSize: 15,
+    lineHeight: 22,
+    height: '100%',
+    textAlignVertical: 'top',
+  },
+  actionButtons: {
+    width: '100%',
   },
   primaryBtn: {
     backgroundColor: CloudVoidTheme.colors.accent,
-    borderRadius: CloudVoidTheme.radii.button,
-    paddingVertical: 16,
+    borderRadius: 14,
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 56,
     shadowColor: CloudVoidTheme.colors.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
   primaryBtnDisabled: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     shadowOpacity: 0,
-    elevation: 0,
   },
   primaryBtnText: {
-    color: CloudVoidTheme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
+    color: '#060810',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   primaryBtnTextDisabled: {
-    color: CloudVoidTheme.colors.textSecondary,
+    color: 'rgba(255, 255, 255, 0.3)',
   },
 });

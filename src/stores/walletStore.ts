@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import { saveMnemonic, deleteMnemonic, getPersistedPrimaryAddress, getPersistedAddresses } from '../services/wallet/storage';
 
 export interface Transaction {
   id: string;
@@ -71,7 +72,7 @@ interface WalletState {
   setTrustPoints: (points: number) => void;
   setRiskScore: (score: number) => void;
   setLockoutActive: (active: boolean) => void;
-  setMnemonic: (phrase: string | null) => Promise<void>;
+  setMnemonic: (phrase: string | null, password?: string) => Promise<void>;
   setBiometricEnabled: (enabled: boolean) => void;
   setScreenshotBlocked: (blocked: boolean) => void;
   setIsVerified: (verified: boolean) => void;
@@ -96,12 +97,12 @@ interface WalletState {
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
-  userId: '0xDefaultTestingUser',
+  userId: getPersistedPrimaryAddress(),
   email: 'developer@cloudvoid.online',
   trustPoints: 100,
   riskScore: 0,
   lockoutActive: false,
-  mnemonic: 'test test test test test test test test test test test junk',
+  mnemonic: null,
   isBiometricEnabled: false,
   isScreenshotBlocked: false,
   isVerified: true,
@@ -125,7 +126,12 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     XMR: 0,
     MATIC: 0,
   },
-  wallets: [{ id: '1', name: 'Main Wallet', address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', status: 'Active' }],
+  wallets: (() => {
+    const addrs = getPersistedAddresses();
+    return addrs && addrs.eth
+      ? [{ id: '1', name: 'Main Wallet', address: addrs.eth, status: 'Active' }]
+      : [];
+  })(),
   customRPCs: [],
   tokens: [
     { symbol: 'BTC', name: 'Bitcoin', price: 30121.75, change: 0.12, iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', sparklineData: [40, 45, 42, 50, 48, 55, 60] },
@@ -142,12 +148,13 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   setRiskScore: (score) => set({ riskScore: score }),
   setLockoutActive: (active) => set({ lockoutActive: active }),
   
-  setMnemonic: async (phrase) => {
+  setMnemonic: async (phrase, password) => {
     if (phrase) {
-      try { await SecureStore.setItemAsync('cloudvoid_mnemonic', phrase); } catch (e) {}
+      // Web requires the vault password (PBKDF2 + AES-GCM); native uses SecureStore.
+      await saveMnemonic(phrase, password);
       set({ mnemonic: phrase });
     } else {
-      try { await SecureStore.deleteItemAsync('cloudvoid_mnemonic'); } catch (e) {}
+      await deleteMnemonic();
       set({ mnemonic: null });
     }
   },
@@ -219,7 +226,11 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   }),
   
   wipeWallet: async () => {
-    try { await SecureStore.deleteItemAsync('cloudvoid_mnemonic'); } catch (e) {}
+    await deleteMnemonic();
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem('cloudvoid_addresses');
+      window.localStorage.removeItem('cloudvoid_userId');
+    }
     set({
       userId: null,
       email: null,

@@ -11,6 +11,9 @@ import { useWalletStore } from '../stores/walletStore';
 
 // Import Screens
 import WelcomeScreen from '../screens/WelcomeScreen';
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
+import EmailVerifyScreen from '../screens/EmailVerifyScreen';
 import ImportWalletScreen from '../screens/ImportWalletScreen';
 import CreateWalletScreen from '../screens/CreateWalletScreen';
 import SeedPhraseVerifyScreen from '../screens/SeedPhraseVerifyScreen';
@@ -193,6 +196,9 @@ function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="EmailVerify" component={EmailVerifyScreen} />
       <Stack.Screen name="ImportWallet" component={ImportWalletScreen} />
       <Stack.Screen name="CreateWallet" component={CreateWalletScreen} />
       <Stack.Screen name="SeedPhraseVerify" component={SeedPhraseVerifyScreen} />
@@ -315,10 +321,9 @@ export default function AppNavigator() {
             <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
             <Stack.Screen name="ThemeMode" component={ThemeModeScreen} />
             
-            {/* Wallet Import/Create screens moved here for easy access while auth is bypassed */}
-            <Stack.Screen name="CreateWallet" component={CreateWalletScreen} />
-            <Stack.Screen name="ImportWallet" component={ImportWalletScreen} />
-            <Stack.Screen name="SeedPhraseVerify" component={SeedPhraseVerifyScreen} />
+            {/* One-chance seed rule: wallet creation/import only runs in the
+                pre-auth AuthFlow. A logged-in wallet can never be overwritten
+                by a new seed — use Manage Wallets / Switch Wallet instead. */}
             <Stack.Screen name="CloudBackup" component={CloudBackupScreen} />
             <Stack.Screen name="ConnectHardwareWallet" component={ConnectHardwareWalletScreen} />
           </Stack.Group>

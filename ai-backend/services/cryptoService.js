@@ -155,8 +155,46 @@ async function fetchRealBalances(addresses) {
   return balances;
 }
 
+// Generate a fresh, random wallet address for the given network id.
+// Used by the AI concierge for burner wallets and token trackers.
+// These are throwaway addresses (not derived from the user's seed) — perfect
+// for one-time burners where the seed must never leave the device.
+function generateWalletAddress(networkId) {
+  const net = (networkId || 'ethereum').toLowerCase();
+  try {
+    if (net === 'solana') {
+      const kp = Keypair.generate();
+      return {
+        address: kp.publicKey.toBase58(),
+        privateKey: Buffer.from(kp.secretKey).toString('hex'),
+      };
+    }
+    if (net === 'tron') {
+      const tw = new TronWeb({ fullHost: 'https://api.trongrid.io' });
+      const acc = tw.createAccount();
+      return { address: acc.address.base58, privateKey: acc.privateKey };
+    }
+    if (net === 'bitcoin') {
+      const keyPair = bitcoin.ECPair.makeRandom();
+      const { address } = bitcoin.payments.p2wpkh({
+        pubkey: keyPair.publicKey,
+        network: bitcoin.networks.bitcoin,
+      });
+      return { address, privateKey: keyPair.toWIF() };
+    }
+    // Default: EVM chains (ethereum, binance-smart-chain, polygon, ...)
+    const w = ethers.Wallet.createRandom();
+    return { address: w.address, privateKey: w.privateKey };
+  } catch (e) {
+    // Last-resort fallback (throwaway address only — never holds real funds)
+    const w = ethers.Wallet.createRandom();
+    return { address: w.address, privateKey: w.privateKey };
+  }
+}
+
 module.exports = {
   AUTHORIZED_NETWORKS,
   deriveAllAddresses,
-  fetchRealBalances
+  fetchRealBalances,
+  generateWalletAddress
 };

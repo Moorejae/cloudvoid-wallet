@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Activi
 import { Ionicons } from '@expo/vector-icons';
 import { CloudVoidTheme } from '../theme/tokens';
 import axios from 'axios';
-import { API_BASE_URL } from '../services/web3Api';
+import { API_BASE_URL, recordRevenueEvent } from '../services/web3Api';
+import { useWalletStore } from '../stores/walletStore';
 import Svg, { Path, Rect, Line } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 
@@ -17,6 +18,10 @@ interface OrderBookEntry {
 }
 
 export default function UnifiedTradingScreen() {
+  const balances = useWalletStore((state) => state.balances);
+  const setBalances = useWalletStore((state) => state.setBalances);
+  const addTransaction = useWalletStore((state) => state.addTransaction);
+
   const [activeCategory, setActiveCategory] = useState('MEMECOINS');
   const [activeSymbol, setActiveSymbol] = useState('BTC');
   const [prices, setPrices] = useState<Record<string, any>>({});
@@ -141,10 +146,55 @@ export default function UnifiedTradingScreen() {
   };
 
   const handleConfirmOrder = () => {
+    const usdAmount = parseFloat(amount) || 0;
+    if (usdAmount <= 0) return;
+
+    const price = prices[activeSymbol]?.usd || 0;
+    const tokenQty = price > 0 ? usdAmount / price : 0;
+    const usdBalance = balances['USDT'] || 0;
+
+    if (orderType === 'BUY' && usdAmount > usdBalance) {
+      Alert.alert(
+        'Insufficient Balance',
+        `You need ${usdAmount.toFixed(2)} USDT but only have ${usdBalance.toFixed(2)} USDT.`
+      );
+      return;
+    }
+
+    // Reflect the executed order in the real wallet state.
+    const newBalances: Record<string, number> = { ...balances };
+    if (orderType === 'BUY') {
+      newBalances['USDT'] = usdBalance - usdAmount;
+      newBalances[activeSymbol] = (newBalances[activeSymbol] || 0) + tokenQty;
+    } else {
+      newBalances['USDT'] = usdBalance + usdAmount;
+      newBalances[activeSymbol] = Math.max(0, (newBalances[activeSymbol] || 0) - tokenQty);
+    }
+    setBalances(newBalances);
+
+    addTransaction({
+      id: 'tx_' + Math.random().toString(36).substring(2, 12),
+      type: 'Swap',
+      token: activeSymbol,
+      amount: tokenQty,
+      fiatAmount: usdAmount,
+      status: 'Confirmed',
+      counterparty: 'CloudVoid Unified Trading',
+      timestamp: 'Just now',
+    });
+
+    // Record the 1% platform convenience fee to the admin revenue dashboard.
+    recordRevenueEvent(
+      'swap_convenience_fee',
+      +(usdAmount * 0.01).toFixed(6),
+      'USDT',
+      { amount_usd: +(usdAmount * 0.01).toFixed(4), fee_percent: 1.0 }
+    );
+
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert(
       'Order Placed',
-      `Successfully placed ${orderType} order of ${amount} USDT worth of ${activeSymbol} with ${leverage}x leverage.`
+      `Successfully ${orderType === 'BUY' ? 'bought' : 'sold'} ${tokenQty.toFixed(6)} ${activeSymbol} for ${usdAmount.toFixed(2)} USDT.`
     );
     setIsOrderModalOpen(false);
   };

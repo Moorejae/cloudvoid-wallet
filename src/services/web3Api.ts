@@ -234,6 +234,49 @@ export async function executeFiatBuy(provider: string, fiatAmount: number, crypt
   }
 }
 
+// 15. POST /api/wallet/burner/sweep — sweep a burner and collect its 10% fee
+export async function executeBurnerSweep(
+  amount: number,
+  token_symbol: string,
+  opts?: { amount_usd?: number; destination?: string }
+): Promise<{ success: boolean; fee_raw?: number; fee_usd?: number; net_to_destination?: number } | null> {
+  try {
+    const res = await api.post('/api/wallet/burner/sweep', {
+      amount,
+      amount_usd: opts?.amount_usd,
+      token_symbol,
+      destination: opts?.destination,
+    });
+    return res.data;
+  } catch (err) {
+    console.warn('executeBurnerSweep failed:', err);
+    return null;
+  }
+}
+
+// 14. POST /api/wallet/revenue/record — record a platform revenue event
+// (feeds the CloudVoid-O2 admin revenue dashboard).
+export async function recordRevenueEvent(
+  source_type: string,
+  amount_raw: number,
+  token_symbol: string,
+  opts?: { amount_usd?: number; fee_percent?: number | null }
+): Promise<boolean> {
+  try {
+    await api.post('/api/wallet/revenue/record', {
+      source_type,
+      amount_raw,
+      amount_usd: opts?.amount_usd ?? amount_raw,
+      token_symbol,
+      fee_percent: opts?.fee_percent ?? null,
+    });
+    return true;
+  } catch (err) {
+    console.warn('recordRevenueEvent failed:', err);
+    return false;
+  }
+}
+
 // 13. GET /api/fiat/affiliate-links
 export async function fetchAffiliateLinks(address?: string, symbol?: string): Promise<Record<string, string> | null> {
   try {

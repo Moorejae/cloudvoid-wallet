@@ -3,12 +3,17 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { executeSwap, SwapQuote, SwapResult } from '../services/web3Api';
+import { useWalletStore } from '../stores/walletStore';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 export default function SwapConfirmationScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { quote, walletAddress } = route.params as { quote: SwapQuote, walletAddress: string };
+
+  const balances = useWalletStore((state) => state.balances);
+  const setBalances = useWalletStore((state) => state.setBalances);
+  const addTransaction = useWalletStore((state) => state.addTransaction);
 
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<SwapResult | null>(null);
@@ -22,6 +27,25 @@ export default function SwapConfirmationScreen() {
         walletAddress,
         quote.estimatedOutput
       );
+      if (res && res.status === 'confirmed') {
+        // Reflect the executed swap in the local wallet state.
+        const from = quote.fromToken;
+        const to = quote.toToken;
+        setBalances({
+          [from]: (balances[from] || 0) - quote.inputAmount,
+          [to]: (balances[to] || 0) + res.outputAmount,
+        });
+        addTransaction({
+          id: res.transactionHash,
+          type: 'Swap',
+          token: `${from}➔${to}`,
+          amount: quote.inputAmount,
+          fiatAmount: quote.inputAmount * (quote.exchangeRate || 1),
+          status: 'Confirmed',
+          counterparty: '1inch Liquidity Router',
+          timestamp: 'Just now',
+        });
+      }
       setResult(res);
       setLoading(false);
     };
@@ -92,7 +116,7 @@ export default function SwapConfirmationScreen() {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.navigate('Crypto Trade')}>
+        <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.doneBtnText}>Done</Text>
         </TouchableOpacity>
       </View>

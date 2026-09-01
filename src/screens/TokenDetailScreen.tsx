@@ -4,6 +4,7 @@ import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import { Ionicons } from '@expo/vector-icons';
 import AIBrain from '../components/AIBrain';
+import { executeBurnerSweep } from '../services/web3Api';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -81,31 +82,41 @@ export default function TokenDetailScreen({ route, navigation }: any) {
     Alert.alert('Copied', 'Address copied to clipboard!');
   };
 
-  const handleSweep = () => {
+  const handleSweep = async () => {
     if (sweepDestination === 'custom' && !customAddressInput.trim()) {
       Alert.alert('Error', 'Please enter a valid destination address.');
       return;
     }
     setBurnerState('sweeping_loading');
-    setTimeout(() => {
-      if (activeBurner) {
-        // 1. Delete from wallet list
-        deleteWallet(activeBurner.id);
-        
-        // 2. Add Transaction to history
-        addTransaction({
-          id: Math.random().toString(),
-          type: 'Send',
-          token: token.symbol,
-          amount: -balance, // sweeps the entire balance
-          fiatAmount: -fiatValue,
-          status: 'Confirmed',
-          counterparty: sweepDestination === 'primary' ? 'Main Wallet' : customAddressInput,
-          timestamp: 'Just now'
-        });
-      }
-      setBurnerState('sweeping_success');
-    }, 2000);
+
+    // A burner address carries a 10% platform receiving fee — collect it via
+    // the backend (records an `one_time_address` event on the admin dashboard).
+    const amount = balance || 0;
+    const dest = sweepDestination === 'primary' ? 'Main Wallet' : customAddressInput;
+    await executeBurnerSweep(amount, token.symbol, {
+      amount_usd: fiatValue,
+      destination: dest,
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 1200));
+
+    if (activeBurner) {
+      // 1. Delete from wallet list
+      deleteWallet(activeBurner.id);
+      
+      // 2. Add Transaction to history
+      addTransaction({
+        id: Math.random().toString(),
+        type: 'Send',
+        token: token.symbol,
+        amount: -amount, // sweeps the entire balance (10% fee applied on-chain)
+        fiatAmount: -fiatValue,
+        status: 'Confirmed',
+        counterparty: dest,
+        timestamp: 'Just now'
+      });
+    }
+    setBurnerState('sweeping_success');
   };
 
   const resetBurnerModal = () => {
@@ -327,6 +338,11 @@ export default function TokenDetailScreen({ route, navigation }: any) {
                 <View style={styles.networkBadge}>
                   <Text style={styles.networkLabel}>Active Network:</Text>
                   <Text style={styles.networkValue}>{token.name} Network</Text>
+                </View>
+
+                <View style={styles.burnerFeeBadge}>
+                  <Ionicons name="pricetag-outline" size={14} color="#f59e0b" />
+                  <Text style={styles.burnerFeeText}>10% receiving fee applies to funds swept from this burner</Text>
                 </View>
 
                 <TouchableOpacity 
@@ -881,7 +897,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    marginBottom: 30,
+    marginBottom: 12,
   },
   networkLabel: {
     fontSize: 13,
@@ -891,6 +907,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#fff',
+  },
+  burnerFeeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 30,
+  },
+  burnerFeeText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#fcd34d',
+    lineHeight: 17,
   },
   actionButtonPrimary: {
     width: '100%',

@@ -16,6 +16,8 @@ const INTENTS = {
   TOGGLE_NOTIFICATIONS: ['notification', 'alert', 'push', 'toggle notifications', 'disable notifications', 'enable notifications', 'mute', 'unmute'],
   PING_LATENCY: ['ping', 'latency', 'speed test', 'check ping', 'test speed', 'latency test', 'ping test'],
   SCAN_RECEIPT: ['scan receipt', 'receipt', 'invoice', 'read receipt', 'check receipt', 'upload receipt'],
+  SWAP: ['swap', 'trade', 'exchange', 'convert', 'buy crypto', 'sell crypto', 'trade coins', 'meme coin', 'memecoin', 'meme coins', 'meme trading', 'buy meme', 'swap tokens', 'exchange tokens'],
+  OPEN_WEB3: ['web3', 'dapp', 'dapps', 'defi', 'browse', 'explore dapps', 'decentralized apps', 'web3 portal', 'browser', 'discover'],
   GREETING: ['hello', 'hi', 'hey', 'greetings', 'sup', 'yo', 'howdy'],
   CAPABILITY_CHECK: ['what can you do', 'help', 'show options', 'what are your powers', 'how can you help', 'features', 'capabilities', 'what do you do']
 };
@@ -94,11 +96,23 @@ function extractIntentAndEntities(text) {
   const clean = cleanString(text);
   let detectedAction = 'UNKNOWN';
   
-  // Check burner specifically
-  const isBurnerRelated = fuzzyMatch(clean, 'burner') || fuzzyMatch(clean, 'temporary wallet') || fuzzyMatch(clean, 'disposable address');
-  if (isBurnerRelated) {
-    detectedAction = 'GENERATE_BURNER';
-  } else {
+  // Check high-signal actions FIRST — swap/trade/web3/burner are decisive verbs
+  // and must win over generic token words. Without this, "swap meme coins"
+  // would be misread as ADD_TOKEN because "coins" fuzzy-matches "coin"
+  // (in the "show coin" ADD_TOKEN keyword).
+  const strongActions = [
+    ['GENERATE_BURNER', ['burner', 'temporary wallet', 'disposable address', 'throwaway', 'burner wallet', 'temp wallet', 'fresh wallet']],
+    ['SWAP', ['swap', 'trade', 'buy', 'sell', 'exchange', 'convert', 'buy crypto', 'sell crypto', 'buy meme', 'sell meme']],
+    ['OPEN_WEB3', ['web3', 'dapps', 'dapp', 'defi', 'web3 portal', 'decentralized apps', 'explore dapps']],
+  ];
+  for (const [intent, kws] of strongActions) {
+    if (kws.some(kw => fuzzyMatch(clean, kw))) {
+      detectedAction = intent;
+      break;
+    }
+  }
+
+  if (detectedAction === 'UNKNOWN') {
     // Loop through intents with fuzzy logic
     for (const [intent, keywords] of Object.entries(INTENTS)) {
       if (keywords.some(kw => fuzzyMatch(clean, kw))) {

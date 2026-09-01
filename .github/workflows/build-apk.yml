@@ -1,0 +1,72 @@
+name: Build Android APK (auto-update)
+
+# Rebuilds and releases a fresh CloudVoid APK on every push to `master`
+# (and on manual dispatch), so installed apps can always update to the latest
+# build. The in-app "Check for Updates" button in Settings fetches the newest
+# release from this workflow.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node (22 — Expo prebuild breaks on Node 24's type-stripping)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java (17 — required by AGP 8.x)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bump version to this build run
+        run: node scripts/bump-version.js "${{ github.run_number }}"
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Pin Gradle 8.14.3 (AGP 8.12 does NOT support Gradle 9)
+        run: |
+          sed -i 's#gradle-9.3.1-bin#gradle-8.14.3-bin#g' android/gradle/wrapper/gradle-wrapper.properties
+          grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Build release APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudvoid-wallet-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: Create / update GitHub Release (drives in-app updates)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: CloudVoid Wallet build v${{ github.run_number }}
+          body: |
+            Auto-built on push to `master` (run #${{ github.run_number }}).
+
+            Install the APK below. The app's Settings → Check for Updates will
+            detect this new build.
+          files: android/app/build/outputs/apk/release/*.apk
+          fail_on_unmatched_files: false

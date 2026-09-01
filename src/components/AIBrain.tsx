@@ -21,6 +21,8 @@ const GLOBAL_ACTIONS = [
   { label: 'Token Info', icon: 'stats-chart-outline', command: 'token info' },
   { label: 'Remove Token', icon: 'close-circle-outline', command: 'hide token' },
   { label: 'Burner Wallet', icon: 'key-outline', command: 'generate burner' },
+  { label: 'Web3 Trading', icon: 'swap-horizontal-outline', command: 'swap' },
+  { label: 'Web3 Portal', icon: 'planet-outline', command: 'web3' },
   { label: 'Filter by Date', icon: 'calendar-outline', command: 'filter by date' },
   { label: 'Scan Receipt', icon: 'receipt-outline', command: 'scan receipt' },
   { label: 'Toggle Theme', icon: 'moon-outline', command: 'toggle theme' },
@@ -177,6 +179,11 @@ export default function AIBrain({ currentRouteName = 'Wallet' }: { currentRouteN
             address: payload.address,
             status: 'Active'
           });
+          // A burner carries a 10% platform receiving fee — inform the user.
+          addMessageStream(
+            `Done. Your burner (${payload.symbol || 'ETH'}) is active: ${payload.address}. ` +
+            `Note: burner addresses carry a ${payload.receivingFeePercent ?? 10}% receiving fee that is collected when funds are swept out.`
+          );
         } else if (action === 'SHOW_SCAM_WARNING') {
           Alert.alert(
             "Scam Check Complete",

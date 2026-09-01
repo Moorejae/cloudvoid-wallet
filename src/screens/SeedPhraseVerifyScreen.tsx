@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, ScrollView, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
-import { API_BASE_URL } from '../services/web3Api';
-import { ethers } from 'ethers';
+import { deriveAllChainAddresses } from '../services/wallet/derive';
+import { saveAddresses, savePrimaryAddress } from '../services/wallet/storage';
+import VaultPasswordModal from '../components/VaultPasswordModal';
 
 export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
   // Retrieve the mnemonic or fallback to a default BIP-39 phrase for stubs
@@ -15,6 +16,10 @@ export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
   const setUserId = useWalletStore((state) => state.setUserId);
   const setMnemonic = useWalletStore((state) => state.setMnemonic);
+
+  const [vaultPassword, setVaultPassword] = useState('');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const pendingWordsRef = useRef<string[]>([]);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
@@ -37,57 +42,52 @@ export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const completeVerification = async (finalWords: string[]) => {
-    if (finalWords.length !== correctSequence.length) return;
-    
+  const finalizeWallet = async (password?: string) => {
     setIsSubmitting(true);
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Derive real EVM address locally
-      const hdNode = ethers.HDNodeWallet.fromPhrase(rawMnemonic);
-      const address = hdNode.address;
 
-      await setMnemonic(rawMnemonic);
-      
-      // Register with backend with timeout
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        
-        const response = await fetch(`${API_BASE_URL}/api/wallet/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address, mnemonic: rawMnemonic, importMethod: 'create' }),
-          signal: controller.signal as any
-        });
-        clearTimeout(timeoutId);
-        
-        const data = await response.json();
-        if (data.tokens) {
-          useWalletStore.getState().setTokens(data.tokens);
-        }
-      } catch (apiError) {
-        console.warn('API Registration failed or timed out, proceeding anyway:', apiError);
+      // Derive ALL 15 chain addresses locally — the backend never sees the mnemonic.
+      const chains = deriveAllChainAddresses(rawMnemonic);
+      const addresses: Record<string, string> = {};
+      for (const [id, c] of Object.entries(chains)) {
+        if (c.address) addresses[id] = c.address;
       }
+      const primary = addresses.eth || '';
 
-      setUserId(address);
+      await setMnemonic(rawMnemonic, password);
+      await saveAddresses(addresses);
+      if (primary) await savePrimaryAddress(primary);
+
+      setUserId(primary || null);
       useWalletStore.getState().resetForNewWallet();
       navigation.reset({
         index: 0,
         routes: [{ name: 'MainFlow' }],
       });
-    } catch (e) {
-      // Fallback
-      await setMnemonic(rawMnemonic);
-      setUserId('0x2dff76d3614301dd6bc1600b3445d9ed2bbd6c812b0a2a96c5c5fadeabc06ace');
-      useWalletStore.getState().resetForNewWallet();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainFlow' }],
-      });
+    } catch (e: any) {
+      Alert.alert('Setup Error', e?.message || 'Could not finalize your wallet.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const completeVerification = (finalWords: string[]) => {
+    if (finalWords.length !== correctSequence.length) return;
+
+    // Web vault requires a password before we encrypt the mnemonic.
+    if (Platform.OS === 'web' && !vaultPassword) {
+      pendingWordsRef.current = finalWords;
+      setShowPasswordModal(true);
+      return;
+    }
+    finalizeWallet(Platform.OS === 'web' ? vaultPassword : undefined);
+  };
+
+  const handlePasswordConfirm = (password: string) => {
+    setVaultPassword(password);
+    setShowPasswordModal(false);
+    finalizeWallet(password);
   };
 
   const handleWordSelect = (word: string) => {
@@ -168,6 +168,12 @@ export default function SeedPhraseVerifyScreen({ route, navigation }: any) {
           <Text style={{ color: CloudVoidTheme.colors.success, fontSize: 16 }}>Setting up your wallet...</Text>
         </View>
       )}
+
+      <VaultPasswordModal
+        visible={showPasswordModal}
+        mode="set"
+        onConfirm={handlePasswordConfirm}
+      />
     </ScrollView>
   );
 }

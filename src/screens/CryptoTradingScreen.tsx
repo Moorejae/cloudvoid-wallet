@@ -5,6 +5,7 @@ import { CloudVoidTheme } from '../theme/tokens';
 import { useNavigation } from '@react-navigation/native';
 import { fetchWalletBalance, fetchTrendingTokens, fetchNewListings, getSwapQuote, TrendingToken, NewListing, SwapQuote } from '../services/web3Api';
 import { useWalletStore } from '../stores/walletStore';
+import { Alert } from 'react-native';
 
 export default function CryptoTradingScreen() {
   const [balance, setBalance] = useState<{ totalValueUSD: number; balances: Record<string, number> } | null>(null);
@@ -21,6 +22,11 @@ export default function CryptoTradingScreen() {
   const navigation = useNavigation<any>();
   const userTokens = useWalletStore(state => state.tokens);
   const userId = useWalletStore(state => state.userId);
+  const wallets = useWalletStore(state => state.wallets);
+  const activeWalletId = useWalletStore(state => state.activeWalletId);
+  // Real wallet address — swaps sign against the user's actual derived address.
+  const activeWallet = wallets.find(w => w.id === activeWalletId) || wallets[0];
+  const walletAddress = activeWallet?.address || userId || '';
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -40,15 +46,19 @@ export default function CryptoTradingScreen() {
 
   const handleGetQuote = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
+    if (!walletAddress) {
+      Alert.alert('No Wallet', 'Create or import a wallet before trading.');
+      return;
+    }
     setQuoting(true);
-    const result = await getSwapQuote(fromToken, toToken, parseFloat(amount), '0x'); // Require actual connection
+    const result = await getSwapQuote(fromToken, toToken, parseFloat(amount), walletAddress);
     setQuote(result);
     setQuoting(false);
   };
 
   const handleExecuteSwap = () => {
     if (!quote) return;
-    navigation.navigate('SwapConfirmation', { quote, walletAddress: '0x' });
+    navigation.navigate('SwapConfirmation', { quote, walletAddress });
   };
 
   return (
