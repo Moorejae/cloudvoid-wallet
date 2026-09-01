@@ -188,7 +188,7 @@ export default function CryptoTradingScreen() {
                 <Text style={styles.tokenCardSymbol}>{token.symbol}</Text>
                 <Text style={styles.tokenCardPrice}>${token.price.toFixed(5)}</Text>
                 <Text style={[styles.tokenCardChange, { color: token.change24h >= 0 ? '#00D395' : '#FF4242' }]}>
-                  {token.change24h >= 0 ? '+' : ''}{token.change24h}%
+                  {token.change24h >= 0 ? '+' : ''}{(token.change24h ?? 0).toFixed(2)}%
                 </Text>
               </TouchableOpacity>
             ))}
@@ -214,7 +214,7 @@ export default function CryptoTradingScreen() {
                 <View style={styles.listRowPriceBox}>
                   <Text style={styles.listRowPrice}>${token.price.toFixed(4)}</Text>
                   <Text style={[styles.listRowChange, { color: token.change24h >= 0 ? '#00D395' : '#FF4242' }]}>
-                    {token.change24h >= 0 ? '+' : ''}{token.change24h}%
+                    {token.change24h >= 0 ? '+' : ''}{(token.change24h ?? 0).toFixed(2)}%
                   </Text>
                 </View>
               </TouchableOpacity>

@@ -134,7 +134,7 @@ export default function Web3PortalScreen() {
                 <Text style={styles.tokenSymbol}>{token.symbol}</Text>
                 <Text style={styles.tokenPrice}>${token.price.toLocaleString(undefined, { maximumFractionDigits: 8 })}</Text>
                 <Text style={[styles.tokenChange, { color: token.change24h >= 0 ? '#00D395' : '#FF4242' }]}>
-                  {token.change24h >= 0 ? '+' : ''}{token.change24h}%
+                  {token.change24h >= 0 ? '+' : ''}{(token.change24h ?? 0).toFixed(2)}%
                 </Text>
               </TouchableOpacity>
             ))}

@@ -156,7 +156,7 @@ export default function TokenDetailScreen({ route, navigation }: any) {
             ${token.price.toLocaleString()}
           </Text>
           <Text style={[styles.inlinePriceChange, { color: isGain ? CloudVoidTheme.colors.success : CloudVoidTheme.colors.danger }]}>
-            {isGain ? '↗' : '↘'} {isGain ? '+' : ''}{token.change}%
+            {isGain ? '↗' : '↘'} {isGain ? '+' : ''}{(token.change ?? 0).toFixed(2)}%
           </Text>
         </View>
 

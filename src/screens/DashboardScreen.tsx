@@ -338,7 +338,7 @@ export default function DashboardScreen({ navigation }: any) {
                           {symbol}{(token.price * rate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </Text>
                         <Text style={[styles.tokenPriceChange, { color: isGain ? CloudVoidTheme.colors.success : CloudVoidTheme.colors.danger }]}>
-                          {isGain ? '+' : ''}{token.change}%
+                          {isGain ? '+' : ''}{(token.change ?? 0).toFixed(2)}%
                         </Text>
                       </View>
                     </View>
