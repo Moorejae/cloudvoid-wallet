@@ -302,10 +302,6 @@ export default function DashboardScreen({ navigation }: any) {
           </View>
           <Text style={styles.portfolioLabel}>{t.portfolioBalance}</Text>
           <Text style={styles.portfolioBalance}>{displayBalance}</Text>
-          <Text style={styles.portfolioMovement}>
-            {t.hrPL}{' '}
-            <Text style={styles.movementPositive}>+{symbol}{(2.75 * rate).toFixed(2)}  +0.03%</Text>
-          </Text>
         </TouchableOpacity>
 
 
