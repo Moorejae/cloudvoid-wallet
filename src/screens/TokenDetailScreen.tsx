@@ -8,6 +8,7 @@ import { executeBurnerSweep } from '../services/web3Api';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { generateBurnerAddress } from '../utils/cryptoRuntime';
+import TokenIcon from '../components/TokenIcon';
 
 export default function TokenDetailScreen({ route, navigation }: any) {
   const token = route.params?.token || { symbol: 'BTC', name: 'Bitcoin', price: 64230.00, change: 2.4, icon: '🧡', iconUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png', color: '#f59e0b' };
@@ -126,7 +127,7 @@ export default function TokenDetailScreen({ route, navigation }: any) {
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <View style={styles.titleContainer}>
-          <Image source={{ uri: token.iconUrl }} style={styles.titleLogo} />
+          <TokenIcon symbol={token.symbol} uri={token.iconUrl} size={20} radius={10} />
           <Text style={styles.topBarTitle}>{token.name}</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 12 }}>

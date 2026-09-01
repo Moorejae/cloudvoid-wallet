@@ -4,6 +4,7 @@ import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Circle } fr
 import { CloudVoidTheme } from '../theme/tokens';
 import { useWalletStore } from '../stores/walletStore';
 import AddWalletModal from '../components/AddWalletModal';
+import TokenIcon from '../components/TokenIcon';
 import { Ionicons } from '@expo/vector-icons';
 import { TRANSLATIONS } from '../utils/translations';
 import { getFiatBuyQuote, executeFiatBuy } from '../services/web3Api';
@@ -326,7 +327,7 @@ export default function DashboardScreen({ navigation }: any) {
                   onPress={() => navigation.navigate('TokenDetail', { token })}
                 >
                   <View style={styles.tokenLeft}>
-                    <Image source={{ uri: token.iconUrl }} style={styles.tokenLogo} />
+                    <TokenIcon symbol={token.symbol} uri={token.iconUrl} size={36} radius={18} />
                     <View>
                       <Text style={styles.tokenName}>{token.name}</Text>
                       <View style={styles.priceRow}>

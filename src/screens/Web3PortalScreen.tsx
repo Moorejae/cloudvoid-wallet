@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CloudVoidTheme } from '../theme/tokens';
 import { useNavigation } from '@react-navigation/native';
 import { fetchAllDApps, fetchTrendingTokens, DApp, TrendingToken } from '../services/web3Api';
+import TokenIcon from '../components/TokenIcon';
 
 const ACTION_CARDS = [
   {
@@ -130,7 +131,7 @@ export default function Web3PortalScreen() {
                 style={styles.tokenCard}
                 onPress={() => navigation.navigate('CryptoTrading')}
               >
-                <Image source={{ uri: token.icon }} style={styles.tokenIcon} />
+                <TokenIcon symbol={token.symbol} uri={token.icon} size={32} radius={8} />
                 <Text style={styles.tokenSymbol}>{token.symbol}</Text>
                 <Text style={styles.tokenPrice}>${token.price.toLocaleString(undefined, { maximumFractionDigits: 8 })}</Text>
                 <Text style={[styles.tokenChange, { color: token.change24h >= 0 ? '#00D395' : '#FF4242' }]}>
